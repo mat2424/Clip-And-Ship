@@ -82,14 +82,79 @@ serve(async (req) => {
       throw new Error('Invalid state parameter');
     }
 
-    // Check state age (max 2 hours instead of 30 minutes)
+    // Check state age (max 24 hours for better user experience)
     const stateAge = Date.now() - parseInt(timestamp);
-    const maxAge = 2 * 60 * 60 * 1000; // 2 hours
+    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
     console.log(`🕐 [${requestId}] State age: ${Math.round(stateAge / 1000)}s (max: ${Math.round(maxAge / 1000)}s)`);
 
     if (stateAge > maxAge) {
       console.error(`❌ [${requestId}] OAuth session expired. Age: ${Math.round(stateAge / 1000)}s, Max: ${Math.round(maxAge / 1000)}s`);
-      throw new Error('OAuth session expired');
+      // Instead of throwing an error, redirect back to app with error
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Session Expired</title>
+            <style>
+              body { 
+                font-family: system-ui, sans-serif; 
+                text-align: center; 
+                padding: 60px 20px;
+                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+                color: white;
+                min-height: 100vh;
+                margin: 0;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+              }
+              .container {
+                max-width: 400px;
+                margin: 0 auto;
+                background: rgba(255,255,255,0.1);
+                padding: 40px;
+                border-radius: 12px;
+                backdrop-filter: blur(10px);
+              }
+              .error-icon { font-size: 48px; margin-bottom: 20px; }
+              .title { font-size: 24px; font-weight: 600; margin-bottom: 10px; }
+              .subtitle { font-size: 16px; opacity: 0.9; margin-bottom: 30px; }
+              .retry-btn { 
+                background: rgba(255,255,255,0.2); 
+                border: none; 
+                color: white; 
+                padding: 12px 24px; 
+                border-radius: 6px; 
+                cursor: pointer;
+                font-size: 14px;
+                text-decoration: none;
+                display: inline-block;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="error-icon">⏰</div>
+              <div class="title">Session Expired</div>
+              <div class="subtitle">Please try connecting to YouTube again</div>
+              <a href="https://clipandship.ca/connect-accounts" class="retry-btn">Try Again</a>
+            </div>
+            <script>
+              setTimeout(() => {
+                window.location.href = 'https://clipandship.ca/connect-accounts?error=session_expired';
+              }, 3000);
+            </script>
+          </body>
+        </html>
+      `;
+      
+      return new Response(errorHtml, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/html',
+        },
+      });
     }
 
     console.log(`🔄 [${requestId}] Processing OAuth for user: ${userId}`);
