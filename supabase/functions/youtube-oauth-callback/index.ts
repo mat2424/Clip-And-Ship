@@ -82,9 +82,9 @@ serve(async (req) => {
       throw new Error('Invalid state parameter');
     }
 
-    // Check state age (max 24 hours for better user experience)
+    // Check state age (30 minutes for better reliability)
     const stateAge = Date.now() - parseInt(timestamp);
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+    const maxAge = 30 * 60 * 1000; // 30 minutes
     console.log(`🕐 [${requestId}] State age: ${Math.round(stateAge / 1000)}s (max: ${Math.round(maxAge / 1000)}s)`);
 
     if (stateAge > maxAge) {

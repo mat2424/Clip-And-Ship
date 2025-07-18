@@ -228,7 +228,7 @@ export function openYouTubeAuthRedirect(): Promise<void> {
 }
 
 /**
- * Open YouTube OAuth in popup window (fallback method)
+ * Open YouTube OAuth in popup window (simplified and more reliable)
  */
 export function openYouTubeAuthPopup(): Promise<void> {
   return new Promise(async (resolve, reject) => {
@@ -247,62 +247,35 @@ export function openYouTubeAuthPopup(): Promise<void> {
         timeoutId = null;
       }
       window.removeEventListener('message', messageHandler);
-      if (broadcastChannel) {
-        broadcastChannel.removeEventListener('message', broadcastHandler);
-        broadcastChannel.close();
-        broadcastChannel = null;
-      }
     };
 
     const messageHandler = (event: MessageEvent) => {
-      console.log('📨 Received message in parent:', event.data);
-      console.log('📨 Message origin:', event.origin);
-      console.log('📨 Expected message type: YOUTUBE_AUTH_SUCCESS');
-
+      console.log('📨 Received message:', event.data);
+      
       if (event.data?.type === 'YOUTUBE_AUTH_SUCCESS' && !resolved) {
         resolved = true;
-        console.log('✅ YouTube auth success received!');
+        console.log('✅ YouTube auth success!');
         cleanup();
-
-        // Don't close popup immediately, let the callback handle it
-        setTimeout(() => {
-          if (popup && !popup.closed) {
-            console.log('🔒 Closing popup window');
-            popup.close();
-          }
-        }, 3000);
-
+        
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+        
         resolve();
-      } else {
-        console.log('📨 Message ignored:', {
-          type: event.data?.type,
-          resolved,
-          isCorrectType: event.data?.type === 'YOUTUBE_AUTH_SUCCESS'
-        });
+      } else if (event.data?.type === 'YOUTUBE_AUTH_ERROR' && !resolved) {
+        resolved = true;
+        console.log('❌ YouTube auth error:', event.data.error);
+        cleanup();
+        
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+        
+        reject(new Error(event.data.error || 'Authentication failed'));
       }
     };
 
-    // BroadcastChannel handler for cross-tab communication
-    let broadcastChannel: BroadcastChannel | null = null;
-    const broadcastHandler = (event: MessageEvent) => {
-      console.log('📡 Received broadcast message:', event.data);
-      if (event.data?.type === 'YOUTUBE_AUTH_SUCCESS' && !resolved) {
-        resolved = true;
-        console.log('✅ YouTube auth success received via broadcast!');
-        cleanup();
-
-        setTimeout(() => {
-          if (popup && !popup.closed) {
-            console.log('🔒 Closing popup window');
-            popup.close();
-          }
-        }, 3000);
-
-        resolve();
-      }
-    };
-
-    // Function to check auth status by polling the database
+    // Function to check auth status by polling
     const checkAuthStatus = async () => {
       try {
         const status = await getYouTubeAuthStatus();
@@ -312,7 +285,6 @@ export function openYouTubeAuthPopup(): Promise<void> {
           cleanup();
 
           if (popup && !popup.closed) {
-            console.log('🔒 Closing popup window');
             popup.close();
           }
 
@@ -325,33 +297,22 @@ export function openYouTubeAuthPopup(): Promise<void> {
 
     try {
       const authUrl = await initiateYouTubeAuth();
-      console.log('Opening YouTube auth popup with URL:', authUrl);
+      console.log('🚀 Opening YouTube auth popup:', authUrl);
 
       popup = window.open(
         authUrl,
         'youtube-auth',
-        'width=500,height=600,scrollbars=yes,resizable=yes'
+        'width=500,height=650,scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no'
       );
 
       if (!popup) {
-        throw new Error('Failed to open popup window');
+        throw new Error('Failed to open popup window. Please allow popups for this site.');
       }
 
-      // Listen for messages (primary method)
+      // Listen for messages from popup
       window.addEventListener('message', messageHandler);
 
-      // Setup BroadcastChannel for cross-tab communication
-      if (typeof BroadcastChannel !== 'undefined') {
-        try {
-          broadcastChannel = new BroadcastChannel('youtube-auth');
-          broadcastChannel.addEventListener('message', broadcastHandler);
-          console.log('📡 BroadcastChannel setup for YouTube auth');
-        } catch (e) {
-          console.log('📡 BroadcastChannel not available:', e);
-        }
-      }
-
-      // Poll for auth status (backup method) - reduced frequency
+      // Poll for popup closure and auth status
       checkInterval = setInterval(() => {
         if (popup && popup.closed && !resolved) {
           resolved = true;
@@ -360,11 +321,11 @@ export function openYouTubeAuthPopup(): Promise<void> {
           return;
         }
 
-        // Check auth status every 5 seconds (reduced from 2 seconds)
+        // Check auth status every 3 seconds
         checkAuthStatus();
-      }, 5000);
+      }, 3000);
 
-      // Set a timeout for the entire auth process (5 minutes)
+      // Set a timeout for the auth process (10 minutes)
       timeoutId = setTimeout(() => {
         if (!resolved) {
           resolved = true;
@@ -374,7 +335,7 @@ export function openYouTubeAuthPopup(): Promise<void> {
           }
           reject(new Error('Authentication timeout'));
         }
-      }, 5 * 60 * 1000);
+      }, 10 * 60 * 1000);
 
     } catch (error) {
       cleanup();
@@ -414,26 +375,24 @@ export async function handleYouTubeAuthCallback(): Promise<boolean> {
 
     console.log('✅ Received YouTube auth code, exchanging for tokens...');
 
-    // Exchange code for tokens
-    const success = await exchangeCodeForTokens(code);
+    // This function handles redirect-based auth, not used in current popup flow
+    // The actual token exchange is handled by the oauth callback edge function
+    console.log('✅ Auth code received, callback will handle token exchange');
 
-    if (success) {
-      console.log('✅ YouTube authentication successful!');
+    // For redirect-based auth, just return success and let the page handle the redirect
+    console.log('✅ YouTube authentication successful!');
 
-      // Get return URL and redirect back
-      const returnUrl = sessionStorage.getItem('youtube_auth_return_url');
-      sessionStorage.removeItem('youtube_auth_return_url');
+    // Get return URL and redirect back
+    const returnUrl = sessionStorage.getItem('youtube_auth_return_url');
+    sessionStorage.removeItem('youtube_auth_return_url');
 
-      if (returnUrl) {
-        // Clean up URL parameters and redirect
-        const cleanUrl = new URL(returnUrl);
-        window.location.href = cleanUrl.origin + cleanUrl.pathname;
-      }
-
-      return true;
-    } else {
-      throw new Error('Failed to exchange code for tokens');
+    if (returnUrl) {
+      // Clean up URL parameters and redirect
+      const cleanUrl = new URL(returnUrl);
+      window.location.href = cleanUrl.origin + cleanUrl.pathname;
     }
+
+    return true;
   } catch (error) {
     console.error('❌ Error handling YouTube auth callback:', error);
     throw error;

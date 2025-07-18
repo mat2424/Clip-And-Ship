@@ -52,8 +52,9 @@ serve(async (req) => {
       );
     }
 
-    // Generate secure state parameter
-    const state = `${user.id}-${Date.now()}-${crypto.randomUUID()}`;
+    // Generate secure state parameter with current timestamp
+    const timestamp = Math.floor(Date.now() / 1000); // Current time in seconds
+    const state = `${user.id}-${timestamp}-${crypto.randomUUID()}`;
     
     // Build OAuth URL with required parameters for offline access
     const redirectUri = `${supabaseUrl}/functions/v1/youtube-oauth-callback`;
