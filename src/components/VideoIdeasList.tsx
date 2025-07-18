@@ -70,14 +70,8 @@ export const VideoIdeasList = () => {
   };
 
   const getSectionColor = (section: string) => {
-    const colors = {
-      'ready_for_approval': 'bg-yellow-50 border-yellow-200',
-      'approved': 'bg-green-50 border-green-200',
-      'processing': 'bg-blue-50 border-blue-200',
-      'completed': 'bg-purple-50 border-purple-200',
-      'rejected': 'bg-red-50 border-red-200'
-    };
-    return colors[section] || 'bg-gray-50 border-gray-200';
+    // Use dark background color to match the theme
+    return 'bg-cool-charcoal border-cool-charcoal text-white';
   };
 
   if (loading) {
@@ -92,22 +86,6 @@ export const VideoIdeasList = () => {
         <div className="p-4 md:p-6 border-b bg-cool-turquoise">
           <div className="flex justify-between items-center">
             <h2 className="text-lg md:text-xl font-semibold text-cool-charcoal">Your Videos</h2>
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-cool-charcoal text-cool-charcoal hover:bg-cool-charcoal hover:text-white"
-              onClick={() => {
-                // Scroll to the form to create a new video
-                const form = document.querySelector('form');
-                if (form) {
-                  form.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
-              disabled={videoIdeas.length === 0}
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              Create Video
-            </Button>
           </div>
         </div>
         <div className="space-y-2 overflow-hidden">
@@ -128,13 +106,13 @@ export const VideoIdeasList = () => {
                   <CollapsibleTrigger asChild>
                     <div className={`p-3 border rounded-lg cursor-pointer hover:bg-opacity-80 transition-colors ${getSectionColor(section)}`}>
                       <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-800">
+                        <h3 className="font-semibold text-white">
                           {getSectionTitle(section, videos.length)}
                         </h3>
                         {expandedSections[section] ? (
-                          <ChevronDown className="w-5 h-5 text-gray-600" />
+                          <ChevronDown className="w-5 h-5 text-white" />
                         ) : (
-                          <ChevronRight className="w-5 h-5 text-gray-600" />
+                          <ChevronRight className="w-5 h-5 text-white" />
                         )}
                       </div>
                     </div>
