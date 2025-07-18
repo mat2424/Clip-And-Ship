@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { ExternalLink, Eye, Upload, Check, X, PlayCircle } from "lucide-react";
+import { ExternalLink, Eye, Upload, Check, X, PlayCircle, Edit3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VideoIdeaStatusBadge } from "./VideoIdeaStatusBadge";
 import { Input } from "@/components/ui/input";
@@ -259,9 +259,12 @@ export const VideoIdeaItem = ({ idea, onPreviewClick, onApprovalChange }: VideoI
       )}
 
       <div className="flex justify-between items-start mb-4">
-        <p className="flex-1 mr-4 text-cool-charcoal font-semibold text-lg md:text-2xl text-left break-words hyphens-auto leading-tight">
-          {idea.idea_text}
-        </p>
+        <div className="flex items-center gap-3 flex-1 mr-4">
+          <p className="text-cool-charcoal font-semibold text-lg md:text-2xl text-left break-words hyphens-auto leading-tight">
+            {idea.idea_text}
+          </p>
+          <Edit3 className="h-6 w-6 text-white stroke-2 flex-shrink-0" />
+        </div>
         <div className="flex gap-2 items-center flex-shrink-0">
           {/* Preview Button for old approval system */}
           {idea.approval_status === 'preview_ready' && idea.preview_video_url && (
@@ -275,17 +278,6 @@ export const VideoIdeaItem = ({ idea, onPreviewClick, onApprovalChange }: VideoI
             </Button>
           )}
 
-          {/* Publish Button for new approval workflow - only show if inline approval not available */}
-          {shouldShowPublishButton(idea) && !shouldShowInlineApproval(idea) && (
-            <Button
-              size="sm"
-              onClick={() => onPreviewClick(idea)}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <Upload className="w-3 h-3 mr-1" />
-              Publish Video
-            </Button>
-          )}
         </div>
       </div>
       
