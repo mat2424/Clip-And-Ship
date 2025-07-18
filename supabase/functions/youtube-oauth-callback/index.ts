@@ -215,7 +215,7 @@ serve(async (req) => {
     console.log(`✅ [${requestId}] YouTube connection saved for user ${userId}`);
 
     // Return success page
-    const origin = 'https://clipandship.ca';
+    const origin = req.headers.get('origin') || 'https://clipandship.ca';
     const successHtml = `
       <!DOCTYPE html>
       <html>
@@ -323,11 +323,11 @@ serve(async (req) => {
                   } else {
                     // If no opener or opener is closed, redirect
                     console.log('No valid opener, redirecting...');
-                    window.location.href = '` + origin + `';
+                    window.location.href = '` + origin + `/#/app';
                   }
                 } catch (e) {
                   console.error('Failed to close window:', e);
-                  window.location.href = '` + origin + `';
+                  window.location.href = '` + origin + `/#/app';
                 }
               }, 3000);
             }, 500);

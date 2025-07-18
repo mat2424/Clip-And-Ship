@@ -414,9 +414,8 @@ export async function handleYouTubeAuthCallback(): Promise<boolean> {
 
     console.log('✅ Received YouTube auth code, exchanging for tokens...');
 
-    // The OAuth callback function handles token exchange automatically
-    // Check if we successfully got tokens by checking auth status
-    const success = true; // OAuth callback handles the exchange
+    // Exchange code for tokens
+    const success = await exchangeCodeForTokens(code);
 
     if (success) {
       console.log('✅ YouTube authentication successful!');

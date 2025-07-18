@@ -57,7 +57,7 @@ serve(async (req) => {
     
     // Build OAuth URL with required parameters for offline access
     const redirectUri = `${supabaseUrl}/functions/v1/youtube-oauth-callback`;
-    const scopes = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl';
+    const scopes = 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly';
     
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', googleClientId);

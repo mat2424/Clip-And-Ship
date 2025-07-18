@@ -45,6 +45,7 @@ serve(async (req) => {
     }
 
     console.log('🔍 Final userEmail value:', userEmail);
+    }
 
     const {
       phase,
