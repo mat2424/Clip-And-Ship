@@ -164,11 +164,11 @@ export const YouTubeConnector: React.FC = () => {
         </CardTitle>
         <CardDescription>
           Connect your YouTube account to enable video uploads
-          <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
-            <strong>Note:</strong> You may see "Google hasn't verified this app" - this is normal for testing. 
-            Click "Advanced" → "Go to {window.location.hostname} (unsafe)" to continue.
-          </div>
         </CardDescription>
+        <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+          <strong>Note:</strong> You may see "Google hasn't verified this app" - this is normal for testing. 
+          Click "Advanced" → "Go to {window.location.hostname} (unsafe)" to continue.
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {authStatus.isConnected ? (
