@@ -68,6 +68,8 @@ export const VideoIdeaItem = ({ idea, onPreviewClick, onApprovalChange }: VideoI
   const [showVideo, setShowVideo] = useState(false);
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(idea.idea_text);
   const { toast } = useToast();
   const { connectedAccounts } = useSocialTokens();
 
@@ -162,6 +164,43 @@ export const VideoIdeaItem = ({ idea, onPreviewClick, onApprovalChange }: VideoI
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleTitleEdit = async () => {
+    if (!isEditingTitle) {
+      setIsEditingTitle(true);
+      return;
+    }
+
+    // Save the edited title
+    try {
+      const { error } = await supabase
+        .from('video_ideas')
+        .update({ idea_text: editedTitle })
+        .eq('id', idea.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Title Updated",
+        description: "Video title has been updated successfully.",
+      });
+
+      setIsEditingTitle(false);
+      onApprovalChange(); // Refresh the list
+    } catch (error) {
+      console.error('Error updating title:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update title. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTitleCancel = () => {
+    setEditedTitle(idea.idea_text);
+    setIsEditingTitle(false);
   };
 
   return (
@@ -260,10 +299,46 @@ export const VideoIdeaItem = ({ idea, onPreviewClick, onApprovalChange }: VideoI
 
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3 flex-1 mr-4">
-          <p className="text-cool-charcoal font-semibold text-lg md:text-2xl text-left break-words hyphens-auto leading-tight">
-            {idea.idea_text}
-          </p>
-          <Edit3 className="h-6 w-6 text-white stroke-2 flex-shrink-0" />
+          {isEditingTitle ? (
+            <div className="flex items-center gap-2 flex-1">
+              <Input
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                className="text-lg md:text-2xl font-semibold bg-white border-2 border-cool-charcoal"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleTitleEdit();
+                  } else if (e.key === 'Escape') {
+                    handleTitleCancel();
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                onClick={handleTitleEdit}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleTitleCancel}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <p className="text-cool-charcoal font-semibold text-lg md:text-2xl text-left break-words hyphens-auto leading-tight">
+                {idea.idea_text}
+              </p>
+              <Edit3 
+                className="h-6 w-6 text-white stroke-2 flex-shrink-0 cursor-pointer hover:text-gray-200 transition-colors" 
+                onClick={handleTitleEdit}
+              />
+            </>
+          )}
         </div>
         <div className="flex gap-2 items-center flex-shrink-0">
           {/* Preview Button for old approval system */}

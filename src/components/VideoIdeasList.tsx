@@ -97,24 +97,16 @@ export const VideoIdeasList = () => {
               variant="outline"
               className="border-cool-charcoal text-cool-charcoal hover:bg-cool-charcoal hover:text-white"
               onClick={() => {
-                // Find a video that's ready to publish (has video_url and is approved)
-                const publishableVideo = videoIdeas.find(v => 
-                  v.video_url && 
-                  (v.approval_status === 'ready_for_approval' || v.approval_status === 'approved')
-                );
-                if (publishableVideo) {
-                  setSelectedVideoForPublish(publishableVideo);
-                } else {
-                  // For demo, just use the first video if available
-                  if (videoIdeas.length > 0) {
-                    setSelectedVideoForPublish(videoIdeas[0]);
-                  }
+                // Scroll to the form to create a new video
+                const form = document.querySelector('form');
+                if (form) {
+                  form.scrollIntoView({ behavior: 'smooth' });
                 }
               }}
               disabled={videoIdeas.length === 0}
             >
               <Plus className="w-4 h-4 mr-1" />
-              Publish
+              Create Video
             </Button>
           </div>
         </div>
