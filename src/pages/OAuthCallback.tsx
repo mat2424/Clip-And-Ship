@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { handleCustomOAuthCallback } from "@/utils/oauthUtils";
+import { handleYouTubeAuthCallback } from "@/utils/youtubeAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -28,7 +29,30 @@ const OAuthCallback = () => {
         console.log('📍 Current URL:', window.location.href);
         console.log('🔗 Hash params:', window.location.hash);
         console.log('🔗 Search params:', window.location.search);
-        
+
+        // First, check if this is a YouTube redirect auth callback
+        try {
+          const isYouTubeCallback = await handleYouTubeAuthCallback();
+          if (isYouTubeCallback) {
+            console.log('✅ YouTube redirect auth handled successfully');
+            toast({
+              title: "Success!",
+              description: "Successfully connected your YouTube account.",
+            });
+            // The handleYouTubeAuthCallback function will handle the redirect
+            return;
+          }
+        } catch (error) {
+          console.error('❌ YouTube redirect auth failed:', error);
+          toast({
+            title: "Connection Failed",
+            description: error instanceof Error ? error.message : "Failed to connect YouTube account",
+            variant: "destructive",
+          });
+          setTimeout(() => navigate("/app"), 2000);
+          return;
+        }
+
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const urlParams = new URLSearchParams(window.location.search);
         

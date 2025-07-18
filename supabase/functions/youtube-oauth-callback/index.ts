@@ -4,6 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Cross-Origin-Opener-Policy': 'unsafe-none',
+  'Cross-Origin-Embedder-Policy': 'unsafe-none',
 };
 
 serve(async (req) => {
@@ -65,14 +67,28 @@ serve(async (req) => {
     }
 
     // Extract and validate user ID from state
-    const [userId, timestamp] = state.split('-');
-    if (!userId || !timestamp) {
+    // State format: userId-timestamp-randomUUID
+    const stateParts = state.split('-');
+    if (stateParts.length < 2) {
+      console.error(`❌ [${requestId}] Invalid state format: ${state}`);
       throw new Error('Invalid state parameter');
     }
 
-    // Check state age (max 30 minutes)
+    const userId = stateParts[0];
+    const timestamp = stateParts[1];
+
+    if (!userId || !timestamp) {
+      console.error(`❌ [${requestId}] Missing userId or timestamp in state: ${state}`);
+      throw new Error('Invalid state parameter');
+    }
+
+    // Check state age (max 2 hours instead of 30 minutes)
     const stateAge = Date.now() - parseInt(timestamp);
-    if (stateAge > 30 * 60 * 1000) {
+    const maxAge = 2 * 60 * 60 * 1000; // 2 hours
+    console.log(`🕐 [${requestId}] State age: ${Math.round(stateAge / 1000)}s (max: ${Math.round(maxAge / 1000)}s)`);
+
+    if (stateAge > maxAge) {
+      console.error(`❌ [${requestId}] OAuth session expired. Age: ${Math.round(stateAge / 1000)}s, Max: ${Math.round(maxAge / 1000)}s`);
       throw new Error('OAuth session expired');
     }
 
@@ -199,6 +215,7 @@ serve(async (req) => {
     console.log(`✅ [${requestId}] YouTube connection saved for user ${userId}`);
 
     // Return success page
+    const origin = req.headers.get('origin') || 'https://clipandship.ca';
     const successHtml = `
       <!DOCTYPE html>
       <html>
@@ -244,20 +261,60 @@ serve(async (req) => {
             // Wait a moment for the page to fully load, then notify parent
             setTimeout(() => {
               console.log('Sending success message to parent window');
+
+              // Try multiple methods to communicate with parent
+              let messageSent = false;
+
+              // Method 1: Direct postMessage to opener
               if (window.opener && !window.opener.closed) {
                 try {
                   window.opener.postMessage({
                     type: 'YOUTUBE_AUTH_SUCCESS',
-                    channelName: '${channelName}',
+                    channelName: '` + channelName + `',
+                    timestamp: Date.now()
+                  }, '*');
+                  console.log('Success message sent to opener');
+                  messageSent = true;
+                } catch (e) {
+                  console.error('Failed to send message to opener:', e);
+                }
+              }
+
+              // Method 2: Try parent window
+              if (!messageSent && window.parent && window.parent !== window) {
+                try {
+                  window.parent.postMessage({
+                    type: 'YOUTUBE_AUTH_SUCCESS',
+                    channelName: '` + channelName + `',
                     timestamp: Date.now()
                   }, '*');
                   console.log('Success message sent to parent');
+                  messageSent = true;
                 } catch (e) {
                   console.error('Failed to send message to parent:', e);
                 }
               }
 
-              // Close the popup after a longer delay to ensure message is received
+              // Method 3: Broadcast to all windows
+              if (!messageSent) {
+                try {
+                  // Use BroadcastChannel if available
+                  if (typeof BroadcastChannel !== 'undefined') {
+                    const channel = new BroadcastChannel('youtube-auth');
+                    channel.postMessage({
+                      type: 'YOUTUBE_AUTH_SUCCESS',
+                      channelName: '` + channelName + `',
+                      timestamp: Date.now()
+                    });
+                    console.log('Success message broadcast');
+                    messageSent = true;
+                  }
+                } catch (e) {
+                  console.error('Failed to broadcast message:', e);
+                }
+              }
+
+              // Close the popup after a delay
               setTimeout(() => {
                 console.log('Attempting to close popup window');
                 try {
@@ -266,13 +323,13 @@ serve(async (req) => {
                   } else {
                     // If no opener or opener is closed, redirect
                     console.log('No valid opener, redirecting...');
-                    window.location.href = '${req.headers.get('origin') || 'https://clipandship.ca'}/app';
+                    window.location.href = '` + origin + `/#/app';
                   }
                 } catch (e) {
                   console.error('Failed to close window:', e);
-                  window.location.href = '${req.headers.get('origin') || 'https://clipandship.ca'}/app';
+                  window.location.href = '` + origin + `/#/app';
                 }
-              }, 2500);
+              }, 3000);
             }, 500);
           </script>
         </body>
@@ -334,7 +391,7 @@ serve(async (req) => {
           <div class="container">
             <div class="error-icon">❌</div>
             <div class="title">Connection Failed</div>
-            <div class="subtitle">${error instanceof Error ? error.message : 'Unknown error'}</div>
+            <div class="subtitle">` + (error instanceof Error ? error.message : 'Unknown error') + `</div>
             <button class="retry-btn" onclick="window.close()">Close Window</button>
           </div>
         </body>

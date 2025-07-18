@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { LandingHeader } from "@/components/LandingHeader";
@@ -12,13 +13,32 @@ import { LandingFooter } from "@/components/LandingFooter";
 const Landing = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if this is an OAuth callback by looking for OAuth parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
+    const hasOAuthParams =
+      urlParams.has('access_token') ||
+      urlParams.has('code') ||
+      urlParams.has('error') ||
+      hashParams.has('access_token') ||
+      hashParams.has('provider_token') ||
+      hashParams.has('error');
+
+    if (hasOAuthParams) {
+      console.log('🔄 OAuth parameters detected on landing page, redirecting to OAuth callback');
+      navigate('/oauth-callback', { replace: true });
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
-  }, []);
+  }, [navigate]);
 
   if (loading) {
     return (

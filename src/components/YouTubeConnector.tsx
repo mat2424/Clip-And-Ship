@@ -4,12 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Youtube, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  getYouTubeAuthStatus, 
-  openYouTubeAuthPopup, 
+import { supabase } from '@/integrations/supabase/client';
+import {
+  getYouTubeAuthStatus,
+  openYouTubeAuthRedirect,
+  openYouTubeAuthPopup,
   disconnectYouTube,
   testYouTubeConnection,
-  type YouTubeAuthStatus 
+  debugYouTubeAuth,
+  type YouTubeAuthStatus
 } from '@/utils/youtubeAuth';
 
 export const YouTubeConnector: React.FC = () => {
@@ -37,33 +40,20 @@ export const YouTubeConnector: React.FC = () => {
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      await openYouTubeAuthPopup();
-      
-      // Refresh status after successful connection
-      await checkAuthStatus();
-      
-      toast({
-        title: "Connected!",
-        description: "Your YouTube account has been connected successfully.",
-      });
+      console.log('🔄 Starting YouTube OAuth using edge function...');
+
+      // Use the existing working edge function approach
+      await openYouTubeAuthRedirect();
+
     } catch (error) {
-      console.error('Connection failed:', error);
+      console.error('❌ YouTube connection failed:', error);
       const errorMessage = error instanceof Error ? error.message : "Failed to connect YouTube account";
-      
-      // Provide specific guidance for common errors
-      let description = errorMessage;
-      if (errorMessage.includes('cancelled') || errorMessage.includes('closed')) {
-        description = "Connection was cancelled. If you saw a security warning, click 'Advanced' then 'Go to site (unsafe)' to proceed.";
-      } else if (errorMessage.includes('popup')) {
-        description = "Please allow popups for this site and try again.";
-      }
-      
+
       toast({
         title: "Connection Failed",
-        description,
+        description: errorMessage,
         variant: "destructive",
       });
-    } finally {
       setIsConnecting(false);
     }
   };
@@ -106,6 +96,23 @@ export const YouTubeConnector: React.FC = () => {
       toast({
         title: "Test Failed",
         description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDebug = async () => {
+    try {
+      await debugYouTubeAuth();
+      toast({
+        title: "Debug Complete",
+        description: "Check the browser console for detailed logs.",
+      });
+    } catch (error) {
+      console.error('Debug failed:', error);
+      toast({
+        title: "Debug Failed",
+        description: error instanceof Error ? error.message : "Debug test failed",
         variant: "destructive",
       });
     }
@@ -200,16 +207,26 @@ export const YouTubeConnector: React.FC = () => {
                 )}
               </Button>
               
-              {authStatus.error && (
-                <Button 
-                  onClick={checkAuthStatus}
+              <div className="flex gap-2">
+                {authStatus.error && (
+                  <Button
+                    onClick={checkAuthStatus}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                  >
+                    Refresh Status
+                  </Button>
+                )}
+                <Button
+                  onClick={handleDebug}
                   variant="outline"
                   size="sm"
-                  className="w-full"
+                  className="flex-1"
                 >
-                  Refresh Status
+                  Debug OAuth
                 </Button>
-              )}
+              </div>
             </div>
           </>
         )}
