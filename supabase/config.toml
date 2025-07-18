@@ -63,3 +63,6 @@ verify_jwt = false
 
 [functions.n8n-youtube-webhook]
 verify_jwt = false
+
+[functions.test-youtube-oauth]
+verify_jwt = false

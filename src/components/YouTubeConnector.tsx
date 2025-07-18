@@ -40,10 +40,18 @@ export const YouTubeConnector: React.FC = () => {
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      console.log('🔄 Starting YouTube OAuth using edge function...');
+      console.log('🔄 Starting YouTube OAuth using popup...');
 
-      // Use the existing working edge function approach
-      await openYouTubeAuthRedirect();
+      // Use popup approach for better reliability
+      await openYouTubeAuthPopup();
+
+      // Refresh auth status after successful connection
+      await checkAuthStatus();
+      
+      toast({
+        title: "YouTube Connected",
+        description: "Your YouTube account has been connected successfully!",
+      });
 
     } catch (error) {
       console.error('❌ YouTube connection failed:', error);
@@ -54,6 +62,7 @@ export const YouTubeConnector: React.FC = () => {
         description: errorMessage,
         variant: "destructive",
       });
+    } finally {
       setIsConnecting(false);
     }
   };
@@ -103,10 +112,27 @@ export const YouTubeConnector: React.FC = () => {
 
   const handleDebug = async () => {
     try {
+      // Test the basic OAuth setup
+      const { data, error } = await supabase.functions.invoke('test-youtube-oauth');
+      
+      if (error) {
+        console.error('❌ OAuth diagnostics failed:', error);
+        toast({
+          title: "Diagnostics Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('🔍 OAuth Diagnostics:', data);
+      
+      // Also run the debug function
       await debugYouTubeAuth();
+      
       toast({
         title: "Debug Complete",
-        description: "Check the browser console for detailed logs.",
+        description: "Check the browser console for detailed logs and diagnostics.",
       });
     } catch (error) {
       console.error('Debug failed:', error);
