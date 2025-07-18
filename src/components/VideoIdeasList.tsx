@@ -82,7 +82,7 @@ export const VideoIdeasList = () => {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-cool-charcoal rounded-lg shadow overflow-hidden">
         <div className="p-4 md:p-6 border-b bg-cool-turquoise">
           <div className="flex justify-between items-center">
             <h2 className="text-lg md:text-xl font-semibold text-cool-charcoal">Your Videos</h2>
