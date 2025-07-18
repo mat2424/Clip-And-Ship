@@ -19,8 +19,26 @@ serve(async (req) => {
     const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const googleClientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
 
-    if (!supabaseUrl || !supabaseServiceKey || !googleClientId || !googleClientSecret) {
-      throw new Error('Missing required environment variables');
+    console.log(`🔍 [${requestId}] Environment variables check:`, {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+      hasGoogleClientId: !!googleClientId,
+      hasGoogleClientSecret: !!googleClientSecret,
+      supabaseUrlLength: supabaseUrl?.length || 0,
+      googleClientIdLength: googleClientId?.length || 0
+    });
+
+    // More detailed error reporting
+    const missingVars = [];
+    if (!supabaseUrl) missingVars.push('SUPABASE_URL');
+    if (!supabaseServiceKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
+    if (!googleClientId) missingVars.push('GOOGLE_CLIENT_ID');
+    if (!googleClientSecret) missingVars.push('GOOGLE_CLIENT_SECRET');
+
+    if (missingVars.length > 0) {
+      const errorMsg = `Missing required environment variables: ${missingVars.join(', ')}`;
+      console.error(`❌ [${requestId}] ${errorMsg}`);
+      throw new Error(errorMsg);
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, { 
@@ -62,6 +80,8 @@ serve(async (req) => {
 
     // Exchange authorization code for tokens
     const redirectUri = `${supabaseUrl}/functions/v1/youtube-oauth-callback`;
+    console.log(`🔄 [${requestId}] Exchanging code for tokens with redirect URI: ${redirectUri}`);
+
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -79,8 +99,8 @@ serve(async (req) => {
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      console.error(`❌ [${requestId}] Token exchange failed:`, errorText);
-      throw new Error(`Token exchange failed: ${errorText}`);
+      console.error(`❌ [${requestId}] Token exchange failed (${tokenResponse.status}):`, errorText);
+      throw new Error(`Token exchange failed (${tokenResponse.status}): ${errorText}`);
     }
 
     const tokenData = await tokenResponse.json();
@@ -189,7 +209,7 @@ serve(async (req) => {
               font-family: system-ui, sans-serif; 
               text-align: center; 
               padding: 60px 20px;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
               color: white;
               min-height: 100vh;
               margin: 0;
@@ -219,14 +239,41 @@ serve(async (req) => {
             <div class="loading">Redirecting you back to the app...</div>
           </div>
           <script>
+            console.log('YouTube OAuth success page loaded');
+
+            // Wait a moment for the page to fully load, then notify parent
             setTimeout(() => {
-              if (window.opener) {
-                window.opener.postMessage({ type: 'YOUTUBE_AUTH_SUCCESS' }, '*');
-                window.close();
-              } else {
-                window.location.href = '${req.headers.get('origin') || 'https://clipandship.ca'}';
+              console.log('Sending success message to parent window');
+              if (window.opener && !window.opener.closed) {
+                try {
+                  window.opener.postMessage({
+                    type: 'YOUTUBE_AUTH_SUCCESS',
+                    channelName: '${channelName}',
+                    timestamp: Date.now()
+                  }, '*');
+                  console.log('Success message sent to parent');
+                } catch (e) {
+                  console.error('Failed to send message to parent:', e);
+                }
               }
-            }, 2000);
+
+              // Close the popup after a longer delay to ensure message is received
+              setTimeout(() => {
+                console.log('Attempting to close popup window');
+                try {
+                  if (window.opener && !window.opener.closed) {
+                    window.close();
+                  } else {
+                    // If no opener or opener is closed, redirect
+                    console.log('No valid opener, redirecting...');
+                    window.location.href = '${req.headers.get('origin') || 'https://clipandship.ca'}/app';
+                  }
+                } catch (e) {
+                  console.error('Failed to close window:', e);
+                  window.location.href = '${req.headers.get('origin') || 'https://clipandship.ca'}/app';
+                }
+              }, 2500);
+            }, 500);
           </script>
         </body>
       </html>

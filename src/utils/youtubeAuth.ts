@@ -174,10 +174,47 @@ export async function testYouTubeConnection(): Promise<{ success: boolean; chann
  */
 export function openYouTubeAuthPopup(): Promise<void> {
   return new Promise(async (resolve, reject) => {
+    let popup: Window | null = null;
+    let checkClosedInterval: NodeJS.Timeout | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+    let resolved = false;
+
+    const cleanup = () => {
+      if (checkClosedInterval) {
+        clearInterval(checkClosedInterval);
+        checkClosedInterval = null;
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      window.removeEventListener('message', messageHandler);
+    };
+
+    const messageHandler = (event: MessageEvent) => {
+      console.log('Received message in parent:', event.data);
+
+      if (event.data?.type === 'YOUTUBE_AUTH_SUCCESS' && !resolved) {
+        resolved = true;
+        console.log('YouTube auth success received');
+        cleanup();
+
+        // Don't close popup immediately, let the callback handle it
+        setTimeout(() => {
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+        }, 3000);
+
+        resolve();
+      }
+    };
+
     try {
       const authUrl = await initiateYouTubeAuth();
-      
-      const popup = window.open(
+      console.log('Opening YouTube auth popup with URL:', authUrl);
+
+      popup = window.open(
         authUrl,
         'youtube-auth',
         'width=500,height=600,scrollbars=yes,resizable=yes'
@@ -187,27 +224,31 @@ export function openYouTubeAuthPopup(): Promise<void> {
         throw new Error('Failed to open popup window');
       }
 
-      // Listen for successful authentication
-      const messageHandler = (event: MessageEvent) => {
-        if (event.data?.type === 'YOUTUBE_AUTH_SUCCESS') {
-          window.removeEventListener('message', messageHandler);
-          popup.close();
-          resolve();
-        }
-      };
-
       window.addEventListener('message', messageHandler);
 
+      // Set a timeout for the entire auth process (5 minutes)
+      timeoutId = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          cleanup();
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+          reject(new Error('Authentication timeout'));
+        }
+      }, 5 * 60 * 1000);
+
       // Check if popup was closed manually
-      const checkClosed = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkClosed);
-          window.removeEventListener('message', messageHandler);
+      checkClosedInterval = setInterval(() => {
+        if (popup && popup.closed && !resolved) {
+          resolved = true;
+          cleanup();
           reject(new Error('Authentication cancelled'));
         }
       }, 1000);
 
     } catch (error) {
+      cleanup();
       reject(error);
     }
   });

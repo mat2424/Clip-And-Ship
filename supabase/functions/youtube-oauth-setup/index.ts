@@ -14,9 +14,23 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const googleClientId = Deno.env.get('GOOGLE_CLIENT_ID');
-    
-    if (!supabaseUrl || !googleClientId) {
-      throw new Error('Missing required environment variables');
+
+    console.log('🔍 Environment variables check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasGoogleClientId: !!googleClientId,
+      supabaseUrlLength: supabaseUrl?.length || 0,
+      googleClientIdLength: googleClientId?.length || 0
+    });
+
+    // More detailed error reporting
+    const missingVars = [];
+    if (!supabaseUrl) missingVars.push('SUPABASE_URL');
+    if (!googleClientId) missingVars.push('GOOGLE_CLIENT_ID');
+
+    if (missingVars.length > 0) {
+      const errorMsg = `Missing required environment variables: ${missingVars.join(', ')}`;
+      console.error(`❌ ${errorMsg}`);
+      throw new Error(errorMsg);
     }
 
     const supabaseClient = createClient(

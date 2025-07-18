@@ -48,6 +48,10 @@ serve(async (req) => {
       if (!userError && user) {
         userEmail = user.email;
         console.log('🔐 User email retrieved:', userEmail);
+        console.log('🔐 User object:', JSON.stringify(user, null, 2));
+      } else {
+        console.log('❌ Failed to get user:', userError);
+        console.log('❌ Auth header:', authHeader ? 'Present' : 'Missing');
       }
     }
 
@@ -117,6 +121,7 @@ serve(async (req) => {
     };
 
     console.log("🚀 Calling N8N webhook with enhanced payload:", webhookUrl);
+    console.log("📦 Enhanced payload being sent:", JSON.stringify(enhancedPayload, null, 2));
 
     try {
       // Call N8N webhook with timeout

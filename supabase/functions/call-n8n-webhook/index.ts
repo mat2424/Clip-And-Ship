@@ -17,20 +17,34 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     let userEmail = null;
 
+    console.log('🔍 All headers:', JSON.stringify(Object.fromEntries(req.headers.entries()), null, 2));
+
     if (authHeader) {
+      console.log('✅ Authorization header found:', authHeader.substring(0, 20) + '...');
+
       const supabaseClient = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
         Deno.env.get("SUPABASE_ANON_KEY") ?? ""
       );
 
-      const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
-        authHeader.replace('Bearer ', '')
-      );
+      const token = authHeader.replace('Bearer ', '');
+      console.log('🔑 Token (first 20 chars):', token.substring(0, 20) + '...');
+
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
       if (!userError && user) {
         userEmail = user.email;
         console.log('🔐 User email retrieved:', userEmail);
+        console.log('🔐 User ID:', user.id);
+      } else {
+        console.log('❌ Failed to get user:', userError);
+        console.log('❌ Error details:', JSON.stringify(userError, null, 2));
       }
+    } else {
+      console.log('❌ No authorization header found');
+    }
+
+    console.log('🔍 Final userEmail value:', userEmail);
     }
 
     const {
@@ -75,7 +89,7 @@ serve(async (req) => {
         social_accounts: social_accounts || {},
         use_ai_voice: use_ai_voice || true,
         voice_file_url: voice_file_url || null,
-        user_email: userEmail,
+        user_email: userEmail || null, // Explicitly include even if null
         test_api_key: testApiKey // Include the test API key
       };
     } else if (phase === 'publish') {
@@ -88,7 +102,7 @@ serve(async (req) => {
         selected_platforms: selected_platforms || upload_targets,
         social_accounts: social_accounts || {},
         preview_video_url,
-        user_email: userEmail
+        user_email: userEmail || null // Explicitly include even if null
       };
     } else {
       throw new Error(`Invalid phase: ${phase}. Must be 'preview' or 'publish'`);
@@ -96,6 +110,7 @@ serve(async (req) => {
 
     console.log("🚀 Calling N8N webhook:", webhookUrl);
     console.log("📦 Payload:", JSON.stringify(payload, null, 2));
+    console.log("🔍 User email in payload:", payload.user_email);
 
     // Call the N8N webhook
     const response = await fetch(webhookUrl, {

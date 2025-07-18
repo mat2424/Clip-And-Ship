@@ -13,6 +13,28 @@ serve(async (req) => {
   }
 
   try {
+    // Get the user from the authorization header
+    const authHeader = req.headers.get('Authorization');
+    let userEmail = null;
+
+    if (authHeader) {
+      const supabaseClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      );
+
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
+        authHeader.replace('Bearer ', '')
+      );
+
+      if (!userError && user) {
+        userEmail = user.email;
+        console.log('🔐 User email retrieved:', userEmail);
+      } else {
+        console.log('❌ Failed to get user:', userError);
+      }
+    }
+
     const { video_idea_id, video_idea, selected_platforms, use_ai_voice, voice_file_url } = await req.json();
 
     // Validate inputs
@@ -34,16 +56,24 @@ serve(async (req) => {
 
     console.log("Calling video generation webhook:", webhookUrl);
 
+    const webhookPayload = {
+      video_idea,
+      selected_platforms,
+      user_email: userEmail,
+      video_idea_id,
+      use_ai_voice,
+      voice_file_url
+    };
+
+    console.log("📦 Webhook payload:", JSON.stringify(webhookPayload, null, 2));
+
     // Call the external webhook
     const webhookResponse = await fetch(webhookUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        video_idea,
-        selected_platforms
-      }),
+      body: JSON.stringify(webhookPayload),
     });
 
     if (!webhookResponse.ok) {
