@@ -151,7 +151,7 @@ serve(async (req) => {
       console.log('Sending video approval data to webhook:', webhookData);
 
       // Get the webhook URL from secrets (gracefully handle if missing)
-      const webhookUrl = Deno.env.get('Test-Approval-Response-Webhook');
+      const webhookUrl = Deno.env.get('VIDEO_APPROVAL_WEBHOOK_URL');
       
       if (webhookUrl) {
         console.log('🔗 Using webhook URL for processing');
