@@ -257,8 +257,12 @@ export function openYouTubeAuthPopup(): Promise<void> {
         console.log('✅ YouTube auth success!');
         cleanup();
         
-        if (popup && !popup.closed) {
-          popup.close();
+        try {
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+        } catch (error) {
+          console.log('📊 Cannot close popup due to COOP restrictions');
         }
         
         resolve();
@@ -267,8 +271,12 @@ export function openYouTubeAuthPopup(): Promise<void> {
         console.log('❌ YouTube auth error:', event.data.error);
         cleanup();
         
-        if (popup && !popup.closed) {
-          popup.close();
+        try {
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+        } catch (error) {
+          console.log('📊 Cannot close popup due to COOP restrictions');
         }
         
         reject(new Error(event.data.error || 'Authentication failed'));
@@ -284,8 +292,12 @@ export function openYouTubeAuthPopup(): Promise<void> {
           console.log('✅ YouTube auth detected via polling!');
           cleanup();
 
-          if (popup && !popup.closed) {
-            popup.close();
+          try {
+            if (popup && !popup.closed) {
+              popup.close();
+            }
+          } catch (error) {
+            console.log('📊 Cannot close popup due to COOP restrictions');
           }
 
           resolve();
@@ -302,7 +314,7 @@ export function openYouTubeAuthPopup(): Promise<void> {
       popup = window.open(
         authUrl,
         'youtube-auth',
-        'width=500,height=650,scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no'
+        'width=500,height=650,scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no,noopener=no,noreferrer=no'
       );
 
       if (!popup) {
@@ -314,11 +326,17 @@ export function openYouTubeAuthPopup(): Promise<void> {
 
       // Poll for popup closure and auth status
       checkInterval = setInterval(() => {
-        if (popup && popup.closed && !resolved) {
-          resolved = true;
-          cleanup();
-          reject(new Error('Authentication cancelled'));
-          return;
+        try {
+          // Try to check if popup is closed, but handle COOP errors gracefully
+          if (popup && popup.closed && !resolved) {
+            resolved = true;
+            cleanup();
+            reject(new Error('Authentication cancelled'));
+            return;
+          }
+        } catch (error) {
+          // If we can't access popup.closed due to COOP, rely only on polling
+          console.log('📊 Cannot check popup status due to COOP, relying on polling');
         }
 
         // Check auth status every 3 seconds
@@ -330,8 +348,12 @@ export function openYouTubeAuthPopup(): Promise<void> {
         if (!resolved) {
           resolved = true;
           cleanup();
-          if (popup && !popup.closed) {
-            popup.close();
+          try {
+            if (popup && !popup.closed) {
+              popup.close();
+            }
+          } catch (error) {
+            console.log('📊 Cannot close popup due to COOP restrictions');
           }
           reject(new Error('Authentication timeout'));
         }
