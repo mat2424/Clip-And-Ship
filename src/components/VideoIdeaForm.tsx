@@ -14,16 +14,20 @@ import { useToast } from "@/hooks/use-toast";
 export const VideoIdeaForm = () => {
   const { toast } = useToast();
   const {
-    formData,
-    isSubmitting,
-    handleInputChange,
-    handlePlatformChange,
-    handleVoiceChange,
-    handleSubmit,
-    canSubmit
+    ideaText,
+    setIdeaText,
+    useCustomVoice,
+    setUseCustomVoice,
+    voiceFile,
+    setVoiceFile,
+    selectedPlatforms,
+    setSelectedPlatforms,
+    userTier,
+    loading,
+    handleSubmit
   } = useVideoIdeaForm();
 
-  const handleSecureInputChange = (field: string, value: string) => {
+  const handleSecureInputChange = (value: string) => {
     // Sanitize input before processing
     const sanitizedValue = sanitizeUserInput(value);
     
@@ -37,21 +41,17 @@ export const VideoIdeaForm = () => {
       return;
     }
     
-    handleInputChange(field, sanitizedValue);
+    setIdeaText(sanitizedValue);
   };
 
   const handleSecureSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Final validation before submission
-    const sanitizedIdeaText = sanitizeUserInput(formData.idea_text);
-    const sanitizedEnvironmentPrompt = sanitizeUserInput(formData.environment_prompt || '');
-    const sanitizedSoundPrompt = sanitizeUserInput(formData.sound_prompt || '');
+    const sanitizedIdeaText = sanitizeUserInput(ideaText);
     
     // Check for inappropriate content one more time
-    if (containsInappropriateContent(sanitizedIdeaText) || 
-        containsInappropriateContent(sanitizedEnvironmentPrompt) || 
-        containsInappropriateContent(sanitizedSoundPrompt)) {
+    if (containsInappropriateContent(sanitizedIdeaText)) {
       toast({
         title: "Content Blocked",
         description: "Your content contains inappropriate material. Please revise and try again.",
@@ -60,17 +60,11 @@ export const VideoIdeaForm = () => {
       return;
     }
     
-    // Update form data with sanitized values
-    const secureFormData = {
-      ...formData,
-      idea_text: sanitizedIdeaText,
-      environment_prompt: sanitizedEnvironmentPrompt,
-      sound_prompt: sanitizedSoundPrompt
-    };
-    
     // Submit with sanitized data
-    await handleSubmit(e, secureFormData);
+    await handleSubmit(e);
   };
+
+  const canSubmit = ideaText.trim().length >= 10;
 
   return (
     <form onSubmit={handleSecureSubmit} className="space-y-6">
@@ -79,57 +73,42 @@ export const VideoIdeaForm = () => {
         <Textarea
           id="idea_text"
           placeholder="Describe your video idea in detail... (10-5000 characters)"
-          value={formData.idea_text}
-          onChange={(e) => handleSecureInputChange('idea_text', e.target.value)}
+          value={ideaText}
+          onChange={(e) => handleSecureInputChange(e.target.value)}
           className="min-h-[100px] resize-none"
           maxLength={5000}
           required
         />
         <div className="text-sm text-muted-foreground text-right">
-          {formData.idea_text.length}/5000 characters
+          {ideaText.length}/5000 characters
         </div>
       </div>
 
       <PlatformSelector
-        selectedPlatforms={formData.selected_platforms}
-        onPlatformChange={handlePlatformChange}
+        selectedPlatforms={selectedPlatforms}
+        onPlatformChange={setSelectedPlatforms}
+        userTier={userTier}
       />
 
       <VoiceSettings
-        useAiVoice={formData.use_ai_voice}
-        voiceFileUrl={formData.voice_file_url}
-        onVoiceChange={handleVoiceChange}
+        useAiVoice={!useCustomVoice}
+        voiceFileUrl={voiceFile ? URL.createObjectURL(voiceFile) : ""}
+        onVoiceChange={(field: string, value: any) => {
+          if (field === 'use_ai_voice') {
+            setUseCustomVoice(!value);
+          } else if (field === 'voice_file_url') {
+            // For now, we'll handle file upload differently since the hook expects a File object
+            // The VoiceSettings component will handle the upload internally
+          }
+        }}
       />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="environment_prompt">Environment Description (Optional)</Label>
-          <Input
-            id="environment_prompt"
-            placeholder="Describe the setting or background..."
-            value={formData.environment_prompt}
-            onChange={(e) => handleSecureInputChange('environment_prompt', e.target.value)}
-            maxLength={500}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="sound_prompt">Sound Description (Optional)</Label>
-          <Input
-            id="sound_prompt"
-            placeholder="Describe any background music or sounds..."
-            value={formData.sound_prompt}
-            onChange={(e) => handleSecureInputChange('sound_prompt', e.target.value)}
-            maxLength={500}
-          />
-        </div>
-      </div>
 
       <Button 
         type="submit" 
-        disabled={!canSubmit || isSubmitting}
+        disabled={!canSubmit || loading}
         className="w-full"
       >
-        {isSubmitting ? (
+        {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Creating Your Video...
