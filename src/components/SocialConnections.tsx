@@ -132,6 +132,48 @@ export const SocialConnections = () => {
     }
   };
 
+  const handleDisconnect = async (platform: SocialPlatform) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // For YouTube, delete from youtube_tokens table
+      if (platform === 'youtube') {
+        const { error } = await supabase
+          .from('youtube_tokens')
+          .delete()
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+      } else {
+        // For other platforms, delete from social_tokens table
+        const { error } = await supabase
+          .from('social_tokens')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('platform', platform);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Disconnected",
+        description: `Successfully disconnected from ${PLATFORM_CONFIG.find(p => p.platform === platform)?.name}.`,
+      });
+
+      // Refresh accounts to update the UI
+      refreshAccounts(true);
+
+    } catch (error: any) {
+      console.error('Error disconnecting platform:', error);
+      toast({
+        title: "Disconnection Failed",
+        description: error.message || "Failed to disconnect from the platform. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Card>
@@ -175,6 +217,7 @@ export const SocialConnections = () => {
                 isLocked={!hasAccess}
                 isPremiumRequired={!hasAccess}
                 onConnect={() => handleConnect(platform.platform)}
+                onDisconnect={() => handleDisconnect(platform.platform)}
               />
             );
           })}

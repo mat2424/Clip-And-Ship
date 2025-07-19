@@ -15,6 +15,7 @@ interface SocialPlatformButtonProps {
   isLocked?: boolean;
   isPremiumRequired?: boolean;
   onConnect: () => void;
+  onDisconnect?: () => void;
 }
 
 export const SocialPlatformButton = ({
@@ -26,7 +27,8 @@ export const SocialPlatformButton = ({
   isConnecting,
   isLocked,
   isPremiumRequired,
-  onConnect
+  onConnect,
+  onDisconnect
 }: SocialPlatformButtonProps) => {
   const isImageIcon = icon.startsWith('/lovable-uploads/') || icon.startsWith('http');
   
@@ -56,7 +58,7 @@ export const SocialPlatformButton = ({
       return {
         disabled: false,
         variant: "default" as const,
-        className: "w-full h-20 bg-green-50 hover:bg-green-100 border-green-200 text-green-800 transition-all duration-200 p-3"
+        className: "w-full h-20 bg-green-50 hover:bg-red-50 border-green-200 hover:border-red-200 text-green-800 hover:text-red-700 transition-all duration-200 p-3"
       };
     }
     
@@ -88,7 +90,7 @@ export const SocialPlatformButton = ({
   return (
     <div className="relative w-full">
       <Button 
-        onClick={onConnect} 
+        onClick={isConnected ? onDisconnect : onConnect} 
         disabled={buttonState.disabled}
         variant={buttonState.variant}
         className={buttonState.className}
@@ -126,7 +128,7 @@ export const SocialPlatformButton = ({
           <div className="text-center min-h-[2rem] flex items-center">
             <span className="text-xs font-medium leading-tight">
               {isConnected ? (
-                <span className="text-green-700 font-semibold">✓ Connected</span>
+                <span className="text-green-700 hover:text-red-600 transition-colors font-semibold">✓ Disconnect</span>
               ) : isConnecting ? (
                 <span className="text-blue-600">Connecting...</span>
               ) : isPremiumRequired || isLocked ? (
