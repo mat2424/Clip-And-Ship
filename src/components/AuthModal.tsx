@@ -38,7 +38,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/#/app`
+            emailRedirectTo: `${window.location.origin}/oauth-callback`
           }
         });
         if (error) throw error;
@@ -76,12 +76,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/#/app`,
-          scopes: 'email profile https://www.googleapis.com/auth/youtube.upload',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent'
-          }
+          redirectTo: `${window.location.origin}/oauth-callback`,
         }
       });
       if (error) throw error;

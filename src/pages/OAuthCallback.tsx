@@ -1,25 +1,37 @@
 
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const OAuthCallback = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Get URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const platform = urlParams.get('platform');
-    const success = urlParams.get('success');
-    const error = urlParams.get('error');
+    // Check for auth session after OAuth callback
+    const checkSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      console.log('OAuth callback - checking session:', { session: !!session, error });
+      
+      if (session) {
+        console.log('OAuth successful, redirecting to app');
+        // Small delay to show success message
+        setTimeout(() => {
+          navigate('/app');
+        }, 1500);
+      } else if (error) {
+        console.error('OAuth error:', error);
+        // Redirect to app anyway to show the sign in modal
+        setTimeout(() => {
+          navigate('/app');
+        }, 2000);
+      } else {
+        // No session yet, wait a bit for Supabase to process
+        setTimeout(checkSession, 1000);
+      }
+    };
 
-    console.log('OAuth callback received:', { platform, success, error });
-
-    // Show success page for a moment, then redirect
-    const timer = setTimeout(() => {
-      navigate('/app');
-    }, 2000);
-
-    return () => clearTimeout(timer);
+    checkSession();
   }, [navigate]);
 
   return (
