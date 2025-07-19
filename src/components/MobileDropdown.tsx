@@ -1,16 +1,10 @@
+
 import { useState } from "react";
-import { User, LogOut, Menu, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CreditBalance } from "@/components/CreditBalance";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Menu, User, LogOut, Settings, CreditCard } from "lucide-react";
+import { CreditBalance } from "./CreditBalance";
 import { Link } from "react-router-dom";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 interface MobileDropdownProps {
   user: any;
@@ -18,34 +12,33 @@ interface MobileDropdownProps {
 }
 
 export const MobileDropdown = ({ user, onSignOut }: MobileDropdownProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="p-2">
           <Menu className="w-5 h-5" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="pb-2">
-          <div className="flex items-center space-x-2">
-            <User className="w-4 h-4" />
-            <span className="text-sm truncate">{user.email}</span>
-          </div>
-        </DropdownMenuLabel>
-        
+      <DropdownMenuContent align="end" className="w-64">
+        <div className="flex items-center space-x-2 p-2">
+          <User className="w-4 h-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground truncate">{user.email}</span>
+        </div>
         <DropdownMenuSeparator />
-        
-        <DropdownMenuItem className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <CreditCard className="w-4 h-4" />
-            <span>Balance</span>
-          </div>
+        <div className="p-2">
           <CreditBalance />
-        </DropdownMenuItem>
-        
+        </div>
         <DropdownMenuSeparator />
-        
-        <DropdownMenuItem onClick={onSignOut} className="flex items-center space-x-2">
+        <DropdownMenuItem asChild>
+          <Link to="/social-connections" className="flex items-center space-x-2 w-full">
+            <Settings className="w-4 h-4" />
+            <span>Social Connections</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onSignOut} className="flex items-center space-x-2 text-red-600">
           <LogOut className="w-4 h-4" />
           <span>Sign Out</span>
         </DropdownMenuItem>

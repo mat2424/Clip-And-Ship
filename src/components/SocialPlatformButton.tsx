@@ -1,7 +1,10 @@
-import { Lock, Loader2 } from "lucide-react";
+
+import { Lock, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Database } from "@/integrations/supabase/types";
+
 type SocialPlatform = Database["public"]["Enums"]["social_platform"];
+
 interface SocialPlatformButtonProps {
   platform: SocialPlatform;
   name: string;
@@ -13,6 +16,7 @@ interface SocialPlatformButtonProps {
   isPremiumRequired?: boolean;
   onConnect: () => void;
 }
+
 export const SocialPlatformButton = ({
   platform,
   name,
@@ -47,19 +51,66 @@ export const SocialPlatformButton = ({
 
   const badgeConfig = getBadgeConfig();
 
+  const getButtonState = () => {
+    if (isConnected) {
+      return {
+        disabled: false,
+        variant: "default" as const,
+        className: "w-full h-20 bg-green-50 hover:bg-green-100 border-green-200 text-green-800 transition-all duration-200 p-3"
+      };
+    }
+    
+    if (isConnecting) {
+      return {
+        disabled: true,
+        variant: "outline" as const,
+        className: "w-full h-20 bg-card hover:bg-accent transition-all duration-200 p-3 opacity-75"
+      };
+    }
+    
+    if (isPremiumRequired || isLocked) {
+      return {
+        disabled: true,
+        variant: "outline" as const,
+        className: "w-full h-20 bg-muted hover:bg-muted transition-all duration-200 p-3 opacity-60"
+      };
+    }
+    
+    return {
+      disabled: false,
+      variant: "outline" as const,
+      className: "w-full h-20 bg-card hover:bg-accent transition-all duration-200 p-3"
+    };
+  };
+
+  const buttonState = getButtonState();
+
   return (
     <div className="relative w-full">
       <Button 
         onClick={onConnect} 
-        disabled={isConnected || isConnecting || isPremiumRequired || isLocked}
-        variant="outline"
-        className="w-full h-20 bg-card hover:bg-accent transition-all duration-200 p-3"
+        disabled={buttonState.disabled}
+        variant={buttonState.variant}
+        className={buttonState.className}
       >
         <div className="flex flex-col items-center justify-center space-y-2 w-full h-full">
           {/* Icon Section */}
           <div className="flex-shrink-0">
             {isConnecting ? (
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            ) : isConnected ? (
+              <div className="relative">
+                {isImageIcon ? (
+                  <img src={icon} alt={name} className="w-8 h-8 object-contain" />
+                ) : (
+                  <div className="w-8 h-8 flex items-center justify-center bg-muted rounded-full">
+                    <span className="text-lg font-bold text-muted-foreground">
+                      {icon === 'facebook' ? 'f' : icon === 'x' ? 'X' : 'in'}
+                    </span>
+                  </div>
+                )}
+                <CheckCircle className="w-4 h-4 text-green-600 absolute -top-1 -right-1 bg-white rounded-full" />
+              </div>
             ) : isImageIcon ? (
               <img src={icon} alt={name} className="w-8 h-8 object-contain" />
             ) : (
@@ -73,8 +124,16 @@ export const SocialPlatformButton = ({
           
           {/* Text Section */}
           <div className="text-center min-h-[2rem] flex items-center">
-            <span className="text-xs font-medium text-foreground leading-tight">
-              {isConnected ? `✓ ${name}` : isConnecting ? "Connecting..." : name}
+            <span className="text-xs font-medium leading-tight">
+              {isConnected ? (
+                <span className="text-green-700 font-semibold">✓ Connected</span>
+              ) : isConnecting ? (
+                <span className="text-blue-600">Connecting...</span>
+              ) : isPremiumRequired || isLocked ? (
+                <span className="text-muted-foreground">{name}</span>
+              ) : (
+                <span className="text-foreground">Connect {name}</span>
+              )}
             </span>
           </div>
         </div>

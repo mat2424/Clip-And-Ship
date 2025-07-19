@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,19 +6,22 @@ import { VideoIdeaForm } from "@/components/VideoIdeaForm";
 import { VideoIdeasList } from "@/components/VideoIdeasList";
 import { CreditBalance } from "@/components/CreditBalance";
 import { PricingSection } from "@/components/PricingSection";
+import { SocialConnections } from "@/components/SocialConnections";
 
 import { Button } from "@/components/ui/button";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { MobileDropdown } from "@/components/MobileDropdown";
 import { AuthModal } from "@/components/AuthModal";
+
 const Index = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({
@@ -39,6 +43,7 @@ const Index = () => {
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
+
   const handleSignOut = async () => {
     const {
       error
@@ -53,9 +58,11 @@ const Index = () => {
       navigate('/');
     }
   };
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-background text-foreground">Loading...</div>;
   }
+
   return <div className="min-h-screen bg-slate-700">
       {/* Header */}
       <header className="bg-card shadow-sm border-b border-border">
@@ -72,13 +79,23 @@ const Index = () => {
             <div className="hidden md:flex items-center space-x-4">
               <CreditBalance />
               
-              {user && <div className="flex items-center space-x-2">
-                  <User className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">{user.email}</span>
-                  <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
-                    <LogOut className="w-4 h-4" />
-                  </Button>
-                </div>}
+              {user && (
+                <>
+                  <Link to="/social-connections">
+                    <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                      <Settings className="w-4 h-4" />
+                      <span>Social Connections</span>
+                    </Button>
+                  </Link>
+                  <div className="flex items-center space-x-2">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">{user.email}</span>
+                    <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground hover:text-foreground">
+                      <LogOut className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </>
+              )}
               
               {!user && <Button 
                   variant="outline" 
@@ -112,9 +129,10 @@ const Index = () => {
             <VideoIdeasList />
           </div>
 
-          {/* Right Column - Pricing */}
+          {/* Right Column - Pricing and Social Connections */}
           <div className="lg:col-span-1 space-y-8">
             <PricingSection />
+            {user && <SocialConnections />}
           </div>
         </div>
       </main>
@@ -127,4 +145,5 @@ const Index = () => {
       />
     </div>;
 };
+
 export default Index;

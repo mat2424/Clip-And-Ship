@@ -15,24 +15,11 @@ const platformProviderMap: Record<string, string> = {
 // Platform-specific OAuth scopes
 const platformScopes: Record<string, string> = {
   youtube: "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube",
-  facebook: "pages_manage_posts,pages_read_engagement",
-  x: "tweet.read tweet.write users.read",
+  facebook: "pages_manage_posts,pages_read_engagement,instagram_basic,instagram_content_publish",
+  x: "tweet.read tweet.write users.read offline.access",
   linkedin: "r_liteprofile w_member_social",
   tiktok: "user.info.basic,video.publish",
   instagram: "user_profile,user_media"
-};
-
-// TikTok and Instagram client configuration
-// You need to set these in your TikTok and Instagram developer portals
-const CLIENT_CONFIG = {
-  tiktok: {
-    clientId: "YOUR_TIKTOK_CLIENT_KEY", // Replace with your actual TikTok client key
-    authUrl: "https://www.tiktok.com/v2/auth/authorize/"
-  },
-  instagram: {
-    clientId: "YOUR_INSTAGRAM_CLIENT_ID", // Replace with your actual Instagram client ID
-    authUrl: "https://api.instagram.com/oauth/authorize"
-  }
 };
 
 export const initiateOAuth = async (platform: SocialPlatform) => {
@@ -76,7 +63,7 @@ export const initiateOAuth = async (platform: SocialPlatform) => {
     const scopes = platformScopes[platform];
 
     // Use the actual domain for redirect instead of preview URL
-    const redirectTo = `https://clipandship.ca/#/oauth-callback`;
+    const redirectTo = `${window.location.origin}/oauth-callback`;
 
     console.log(`🔗 OAuth config:`, {
       provider,
@@ -115,51 +102,14 @@ const initiateCustomOAuth = async (platform: 'tiktok' | 'instagram') => {
   try {
     console.log(`🔧 Setting up custom OAuth for ${platform}`);
     
-    // Generate a random state parameter for security
-    const state = generateRandomState();
-    
-    // Store state in localStorage for verification later
-    localStorage.setItem(`${platform}_oauth_state`, state);
-    
-    const redirectUri = `https://clipandship.ca/#/oauth-callback`;
-    
-    let authUrl = '';
-    
+    // For now, show a message that these platforms require API keys
     if (platform === 'tiktok') {
-      // Check if client ID is configured
-      if (CLIENT_CONFIG.tiktok.clientId === 'YOUR_TIKTOK_CLIENT_KEY') {
-        throw new Error('TikTok client ID not configured. Please update the CLIENT_CONFIG in oauthUtils.ts with your actual TikTok client key from the developer portal.');
-      }
-      
-      authUrl = `${CLIENT_CONFIG.tiktok.authUrl}?` +
-        `client_key=${CLIENT_CONFIG.tiktok.clientId}&` +
-        `scope=${platformScopes.tiktok}&` +
-        `response_type=code&` +
-        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `state=${state}`;
-        
-      console.log(`🎯 TikTok OAuth URL:`, authUrl);
-      
-    } else if (platform === 'instagram') {
-      // Check if client ID is configured
-      if (CLIENT_CONFIG.instagram.clientId === 'YOUR_INSTAGRAM_CLIENT_ID') {
-        throw new Error('Instagram client ID not configured. Please update the CLIENT_CONFIG in oauthUtils.ts with your actual Instagram client ID from the Facebook Developer portal.');
-      }
-      
-      authUrl = `${CLIENT_CONFIG.instagram.authUrl}?` +
-        `client_id=${CLIENT_CONFIG.instagram.clientId}&` +
-        `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `scope=${platformScopes.instagram}&` +
-        `response_type=code&` +
-        `state=${state}`;
-        
-      console.log(`📸 Instagram OAuth URL:`, authUrl);
+      throw new Error('TikTok integration requires API keys. Please contact support to set up TikTok publishing.');
     }
     
-    console.log(`🚀 Redirecting to ${platform} OAuth...`);
-    
-    // Redirect to the OAuth provider
-    window.location.href = authUrl;
+    if (platform === 'instagram') {
+      throw new Error('Instagram integration requires API keys. Please contact support to set up Instagram publishing.');
+    }
     
     return { data: null, error: null };
   } catch (error) {
@@ -285,54 +235,29 @@ const initiateYouTubeOAuth = async () => {
     console.log('✅ Session obtained, calling edge function...');
     
     // Call the YouTube OAuth setup edge function
-    const functionUrl = `https://djmkzsxsfwyrqmhcgsyx.supabase.co/functions/v1/youtube-oauth-setup`;
-    console.log('🔗 Calling:', functionUrl);
+    const { data, error } = await supabase.functions.invoke('youtube-oauth-setup', {});
     
-    const response = await fetch(functionUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqbWt6c3hzZnd5cnFtaGNnc3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3MTg1MzAsImV4cCI6MjA2NjI5NDUzMH0.XWySAzBoatcmBUQFxugMX2MsRauACoSeJssgGQJBC-k',
-      },
-    });
-    
-    console.log('📡 Response status:', response.status);
-    console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-    
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.error('❌ Edge function error response:', responseText);
-      let errorData;
-      try {
-        errorData = JSON.parse(responseText);
-      } catch {
-        errorData = { error: responseText };
-      }
-      throw new Error(errorData.error || `Edge function failed with status ${response.status}`);
+    if (error) {
+      console.error('❌ Edge function error:', error);
+      throw new Error(error.message || 'Failed to initiate YouTube OAuth');
     }
     
-    const responseData = await response.json();
-    console.log('✅ YouTube OAuth response:', responseData);
+    console.log('✅ YouTube OAuth response:', data);
     
-    if (responseData.authUrl) {
-      console.log('🚀 Redirecting to Google OAuth:', responseData.authUrl);
+    if (data?.authUrl) {
+      console.log('🚀 Redirecting to Google OAuth:', data.authUrl);
       
       // Store a flag to know we initiated YouTube OAuth
       localStorage.setItem('youtube_oauth_initiated', 'true');
       localStorage.setItem('youtube_oauth_timestamp', Date.now().toString());
       
-      window.location.href = responseData.authUrl;
+      window.location.href = data.authUrl;
       return { data: null, error: null };
     } else {
       throw new Error('No OAuth URL returned from edge function');
     }
   } catch (error) {
     console.error('💥 Error initiating YouTube OAuth:', error);
-    console.error('💥 Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    });
     throw error;
   }
 };
