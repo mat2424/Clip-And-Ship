@@ -31,6 +31,7 @@ const App = () => (
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/404" element={<NotFound />} />
+          <Route path="/connect-accounts" element={<NotFound />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </HashRouter>
