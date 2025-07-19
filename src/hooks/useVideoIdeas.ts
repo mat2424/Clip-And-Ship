@@ -58,9 +58,29 @@ export const useVideoIdeas = () => {
       
       const newVideoIdeas = data || [];
       
+      // Delete rejected videos immediately
+      const rejectedVideos = newVideoIdeas.filter(v => v.approval_status === 'rejected');
+      if (rejectedVideos.length > 0) {
+        console.log(`Found ${rejectedVideos.length} rejected videos to delete`);
+        
+        for (const rejectedVideo of rejectedVideos) {
+          const { error: deleteError } = await supabase
+            .from('video_ideas')
+            .delete()
+            .eq('id', rejectedVideo.id);
+            
+          if (deleteError) {
+            console.error('Error deleting rejected video:', deleteError);
+          }
+        }
+      }
+      
+      // Filter out rejected videos from display
+      const filteredVideoIdeas = newVideoIdeas.filter(v => v.approval_status !== 'rejected');
+      
       // Check for newly completed videos and show success toast
       if (previousVideoIdeas.length > 0) {
-        newVideoIdeas.forEach(newVideo => {
+        filteredVideoIdeas.forEach(newVideo => {
           const oldVideo = previousVideoIdeas.find(v => v.id === newVideo.id);
           if (oldVideo && 
               oldVideo.status !== 'completed' && 
@@ -77,8 +97,8 @@ export const useVideoIdeas = () => {
         });
       }
       
-      setPreviousVideoIdeas([...newVideoIdeas]);
-      setVideoIdeas(newVideoIdeas);
+      setPreviousVideoIdeas([...filteredVideoIdeas]);
+      setVideoIdeas(filteredVideoIdeas);
     } catch (error) {
       console.error('Error fetching video ideas:', error);
     } finally {
