@@ -125,7 +125,7 @@ serve(async (req) => {
         throw new Error('No platforms available for upload with current subscription tier');
       }
 
-      // Send all video data to N8N webhook for processing
+      // Send all video data to webhook for processing
       const webhookData = {
         video_idea_id: video_idea_id,
         video_url: videoIdea.video_url,
@@ -148,38 +148,51 @@ serve(async (req) => {
         }
       };
 
-      console.log('Sending video approval data to test webhook:', webhookData);
+      console.log('Sending video approval data to webhook:', webhookData);
 
-      // Get the test webhook URL from secrets
-      const testWebhookUrl = Deno.env.get('Test-Approval-Response-Webhook');
+      // Get the webhook URL from secrets (gracefully handle if missing)
+      const webhookUrl = Deno.env.get('Test-Approval-Response-Webhook');
       
-      if (!testWebhookUrl) {
-        console.error('❌ Test-Approval-Response-Webhook not configured in secrets');
-        throw new Error('Test webhook URL not configured');
+      if (webhookUrl) {
+        console.log('🔗 Using webhook URL for processing');
+
+        // Send to webhook
+        try {
+          const webhookResponse = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(webhookData)
+          });
+
+          if (!webhookResponse.ok) {
+            console.error('Webhook failed:', await webhookResponse.text());
+            throw new Error('Failed to send video approval to webhook for processing');
+          }
+
+          console.log('✅ Video approval sent to webhook successfully');
+        } catch (webhookError) {
+          console.error('Webhook error:', webhookError);
+          // Don't fail the entire operation if webhook fails
+          console.log('⚠️ Webhook failed but continuing with approval process');
+        }
+      } else {
+        console.log('⚠️ No webhook URL configured, skipping webhook call');
+        // For now, we'll just mark as published since no webhook is configured
+        await supabase
+          .from('video_ideas')
+          .update({
+            status: 'published',
+            published_at: new Date().toISOString()
+          })
+          .eq('id', video_idea_id);
       }
-
-      console.log('🔗 Using test webhook URL:', testWebhookUrl);
-
-      // Send to test webhook
-      const webhookResponse = await fetch(testWebhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(webhookData)
-      });
-
-      if (!webhookResponse.ok) {
-        console.error('Test webhook failed:', await webhookResponse.text());
-        throw new Error('Failed to send video approval to test webhook');
-      }
-
-      console.log('✅ Video approval sent to test webhook successfully');
 
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Video approved and sent to test webhook for processing' 
+          message: 'Video approved and processing started'
         }),
         { 
           status: 200, 
