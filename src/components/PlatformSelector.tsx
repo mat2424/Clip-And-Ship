@@ -1,4 +1,5 @@
 
+import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Lock } from "lucide-react";
@@ -39,6 +40,13 @@ export const PlatformSelector = ({
   userTier
 }: PlatformSelectorProps) => {
   const { toast } = useToast();
+
+  // Auto-select YouTube for free users if no platforms are selected
+  React.useEffect(() => {
+    if (userTier === 'free' && selectedPlatforms.length === 0) {
+      onPlatformChange(['YouTube']);
+    }
+  }, [userTier, selectedPlatforms.length, onPlatformChange]);
 
   const canSelectPlatform = (platform: { name: string; tier: string }) => {
     if (platform.tier === "free") return true;

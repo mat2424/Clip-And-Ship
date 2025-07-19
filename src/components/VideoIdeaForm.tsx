@@ -73,6 +73,12 @@ export const VideoIdeaForm = () => {
           placeholder="Describe your video idea in detail... (10-5000 characters)"
           value={ideaText}
           onChange={(e) => handleSecureInputChange(e.target.value)}
+          onKeyDown={(e) => {
+            // Allow spacebar to work normally in the textarea
+            if (e.key === ' ') {
+              e.stopPropagation();
+            }
+          }}
           className="min-h-[100px] resize-none"
           maxLength={5000}
           required
