@@ -115,6 +115,28 @@ const OAuthCallback = () => {
           if (user) {
             console.log('👤 Storing YouTube connection for user:', user.id);
             
+            // Update profile with Google data if available
+            if (user.user_metadata) {
+              const { full_name, avatar_url, google_id } = user.user_metadata;
+              console.log('📝 Updating profile with Google data:', { full_name, avatar_url, google_id });
+              
+              const { error: profileError } = await supabase
+                .from('profiles')
+                .update({
+                  full_name: full_name || user.user_metadata.name,
+                  avatar_url: avatar_url || user.user_metadata.avatar_url,
+                  google_id: google_id || user.user_metadata.sub,
+                  terms_accepted_at: new Date().toISOString()
+                })
+                .eq('id', user.id);
+              
+              if (profileError) {
+                console.warn('⚠️ Failed to update profile with Google data:', profileError);
+              } else {
+                console.log('✅ Profile updated with Google data');
+              }
+            }
+            
             // Calculate expiration date
             let expirationDate = null;
             if (expiresAt) {
@@ -174,9 +196,21 @@ const OAuthCallback = () => {
 
             console.log('✅ YouTube connection saved successfully:', data);
             
+            // Show enhanced success message with welcome credits for new users
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('welcome_credits_given, credits')
+              .eq('id', user.id)
+              .single();
+            
+            const isNewUser = profile?.welcome_credits_given;
+            const successMessage = isNewUser 
+              ? `Welcome! You've received ${profile?.credits || 10} free credits and connected YouTube.`
+              : "Successfully connected your YouTube account with upload permissions.";
+            
             toast({
               title: "Success!",
-              description: "Successfully connected your YouTube account with upload permissions.",
+              description: successMessage,
             });
             
             // Clear the URL hash to prevent reprocessing

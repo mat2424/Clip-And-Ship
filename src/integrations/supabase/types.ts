@@ -124,28 +124,43 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           credits: number
           email: string
+          full_name: string | null
+          google_id: string | null
           id: string
           subscription_tier: string
+          terms_accepted_at: string | null
           updated_at: string
+          welcome_credits_given: boolean
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           credits?: number
           email: string
+          full_name?: string | null
+          google_id?: string | null
           id: string
           subscription_tier?: string
+          terms_accepted_at?: string | null
           updated_at?: string
+          welcome_credits_given?: boolean
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           credits?: number
           email?: string
+          full_name?: string | null
+          google_id?: string | null
           id?: string
           subscription_tier?: string
+          terms_accepted_at?: string | null
           updated_at?: string
+          welcome_credits_given?: boolean
         }
         Relationships: []
       }
@@ -326,6 +341,7 @@ export type Database = {
       youtube_tokens: {
         Row: {
           access_token: string
+          channel_id: string | null
           channel_name: string | null
           created_at: string
           expires_at: string
@@ -338,6 +354,7 @@ export type Database = {
         }
         Insert: {
           access_token: string
+          channel_id?: string | null
           channel_name?: string | null
           created_at?: string
           expires_at: string
@@ -350,6 +367,7 @@ export type Database = {
         }
         Update: {
           access_token?: string
+          channel_id?: string | null
           channel_name?: string | null
           created_at?: string
           expires_at?: string
