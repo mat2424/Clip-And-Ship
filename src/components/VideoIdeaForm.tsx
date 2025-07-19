@@ -75,9 +75,26 @@ export const VideoIdeaForm = () => {
           onChange={(e) => handleSecureInputChange(e.target.value)}
           onKeyDown={(e) => {
             // Allow spacebar to work normally in the textarea
-            if (e.key === ' ') {
+            if (e.key === ' ' || e.key === 'Spacebar') {
               e.stopPropagation();
+              // Force the space to be typed by manually updating the value
+              const currentValue = e.currentTarget.value;
+              const selectionStart = e.currentTarget.selectionStart || 0;
+              const selectionEnd = e.currentTarget.selectionEnd || 0;
+              const newValue = currentValue.slice(0, selectionStart) + ' ' + currentValue.slice(selectionEnd);
+              handleSecureInputChange(newValue);
+              
+              // Move cursor position
+              setTimeout(() => {
+                if (e.currentTarget) {
+                  e.currentTarget.selectionStart = selectionStart + 1;
+                  e.currentTarget.selectionEnd = selectionStart + 1;
+                }
+              }, 0);
+              
+              e.preventDefault();
             }
+            console.log('VideoIdeaForm keydown:', e.key, 'prevented:', e.defaultPrevented);
           }}
           className="min-h-[100px] resize-none"
           maxLength={5000}
