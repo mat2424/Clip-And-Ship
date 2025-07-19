@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,8 +74,10 @@ export const VideoIdeaForm = () => {
           value={ideaText}
           onChange={(e) => handleSecureInputChange(e.target.value)}
           onKeyDown={(e) => {
-            // Stop event propagation to prevent parent components from interfering
-            e.stopPropagation();
+            // Allow spacebar to work normally in the textarea
+            if (e.key === ' ') {
+              e.stopPropagation();
+            }
           }}
           className="min-h-[100px] resize-none"
           maxLength={5000}
