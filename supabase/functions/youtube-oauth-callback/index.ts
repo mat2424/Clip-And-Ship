@@ -84,7 +84,7 @@ serve(async (req) => {
     }
 
     // Check state age (45 minutes for better UX)
-    const stateAge = Date.now() - (timestamp * 1000);
+    const stateAge = Date.now() - timestamp; // timestamp is already in milliseconds
     const maxAge = 45 * 60 * 1000; // 45 minutes
     console.log(`🕐 [${requestId}] State age: ${Math.round(stateAge / 1000)}s (max: ${Math.round(maxAge / 1000)}s)`);
 
