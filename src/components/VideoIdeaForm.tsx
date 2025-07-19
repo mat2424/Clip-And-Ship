@@ -1,9 +1,7 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { PlatformSelector } from "@/components/PlatformSelector";
 import { VoiceSettings } from "@/components/VoiceSettings";
 import { useVideoIdeaForm } from "@/hooks/useVideoIdeaForm";
@@ -96,9 +94,6 @@ export const VideoIdeaForm = () => {
         onVoiceChange={(field: string, value: any) => {
           if (field === 'use_ai_voice') {
             setUseCustomVoice(!value);
-          } else if (field === 'voice_file_url') {
-            // For now, we'll handle file upload differently since the hook expects a File object
-            // The VoiceSettings component will handle the upload internally
           }
         }}
       />
