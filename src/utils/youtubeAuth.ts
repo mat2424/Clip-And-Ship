@@ -338,6 +338,7 @@ export function openYouTubeAuthPopup(): Promise<void> {
       urlWithSession.searchParams.set('session_id', sessionId);
       
       console.log('🚀 Opening YouTube auth popup with session:', sessionId);
+      console.log('🔗 Auth URL:', urlWithSession.toString());
 
       // Open popup with minimal restrictions
       popup = window.open(
@@ -345,6 +346,8 @@ export function openYouTubeAuthPopup(): Promise<void> {
         'youtube-auth',
         'width=500,height=700,scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no,location=no'
       );
+
+      console.log('📱 Popup opened:', !!popup);
 
       if (!popup) {
         throw new Error('Failed to open popup window. Please allow popups for this site and try again.');
@@ -356,19 +359,28 @@ export function openYouTubeAuthPopup(): Promise<void> {
 
       // Poll for popup status and auth completion
       checkInterval = setInterval(() => {
-        // Check if popup is still open (may not work due to COOP)
+        // Only check if popup is closed if we can actually access it (no COOP)
+        let popupClosed = false;
         try {
-          if (popup && popup.closed && !resolved) {
-            finishAuth(false, 'Authentication cancelled by user');
-            return;
+          // Try to access popup.closed - this will fail with COOP
+          if (popup && popup.closed) {
+            popupClosed = true;
           }
         } catch (error) {
-          // COOP prevents checking popup.closed, continue with other methods
+          // COOP prevents checking popup.closed - don't assume it's cancelled
+          // The popup is likely still open, just can't be accessed
+          console.log('📊 Cannot check popup status due to COOP restrictions');
+        }
+
+        // Only trigger cancellation if we can definitively confirm the popup is closed
+        if (popupClosed && !resolved) {
+          finishAuth(false, 'Authentication cancelled by user');
+          return;
         }
 
         // Check database for successful auth
         checkAuthStatus();
-      }, 2000);
+      }, 3000);
 
       // Set timeout for auth process (45 minutes for better UX)
       timeoutId = setTimeout(() => {

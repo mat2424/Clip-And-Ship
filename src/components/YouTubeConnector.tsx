@@ -190,7 +190,8 @@ export const YouTubeConnector: React.FC = () => {
         </CardDescription>
         <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
           <strong>Note:</strong> You may see "Google hasn't verified this app" - this is normal for testing. 
-          Click "Advanced" → "Go to {window.location.hostname} (unsafe)" to continue.
+          Click "Advanced" → "Go to {window.location.hostname} (unsafe)" to continue. After authorization, 
+          the popup will close automatically and your connection status will update.
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
