@@ -222,46 +222,6 @@ export const SocialConnections = () => {
             );
           })}
         </div>
-
-        {/* Upgrade Prompts */}
-        {userTier === 'free' && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-semibold text-blue-900 mb-2">Upgrade Your Account</h3>
-            <p className="text-sm text-blue-700 mb-3">
-              <strong>Premium:</strong> Unlock Instagram, Facebook, and Threads for broader reach<br/>
-              <strong>Pro:</strong> Get access to all platforms including X, LinkedIn, and TikTok
-            </p>
-            <div className="flex gap-2">
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors">
-                Upgrade to Premium
-              </button>
-              <button className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm hover:bg-purple-700 transition-colors">
-                Upgrade to Pro
-              </button>
-            </div>
-          </div>
-        )}
-
-        {userTier === 'premium' && (
-          <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-            <h3 className="font-semibold text-purple-900 mb-2">Unlock All Platforms</h3>
-            <p className="text-sm text-purple-700 mb-3">
-              <strong>Upgrade to Pro</strong> to access X, LinkedIn, and TikTok for maximum reach across all major platforms.
-            </p>
-            <button className="px-4 py-2 bg-purple-600 text-white rounded-md text-sm hover:bg-purple-700 transition-colors">
-              Upgrade to Pro
-            </button>
-          </div>
-        )}
-
-        {userTier === 'pro' && (
-          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <h3 className="font-semibold text-green-900 mb-2">🎉 Pro Account Active</h3>
-            <p className="text-sm text-green-700">
-              You have access to all social media platforms. Connect your accounts to start publishing!
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

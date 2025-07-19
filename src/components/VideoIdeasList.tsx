@@ -38,8 +38,7 @@ export const VideoIdeasList = () => {
     'ready_for_approval': true,
     'approved': true,
     'processing': true,
-    'completed': true,
-    'rejected': false
+    'completed': true
   });
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({
@@ -52,8 +51,7 @@ export const VideoIdeasList = () => {
       'ready_for_approval': videoIdeas.filter(v => v.approval_status === 'ready_for_approval'),
       'approved': videoIdeas.filter(v => v.approval_status === 'approved'),
       'processing': videoIdeas.filter(v => v.status === 'processing' || v.status === 'generating'),
-      'completed': videoIdeas.filter(v => v.approval_status === 'published' || v.youtube_link || v.instagram_link || v.tiktok_link),
-      'rejected': videoIdeas.filter(v => v.approval_status === 'rejected')
+      'completed': videoIdeas.filter(v => v.approval_status === 'published' || v.youtube_link || v.instagram_link || v.tiktok_link)
     };
     return categories;
   };
@@ -62,8 +60,7 @@ export const VideoIdeasList = () => {
       'ready_for_approval': `Ready for Approval (${count})`,
       'approved': `Approved Videos (${count})`,
       'processing': `Processing (${count})`,
-      'completed': `Published Videos (${count})`,
-      'rejected': `Rejected Videos (${count})`
+      'completed': `Published Videos (${count})`
     };
     return titles[section] || section;
   };

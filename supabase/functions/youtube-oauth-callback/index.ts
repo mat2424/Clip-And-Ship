@@ -319,9 +319,10 @@ function createSuccessPage(channelName: string, sessionId?: string): Response {
                 window.close();
               } catch (e) {
                 console.log('📊 Cannot close window, redirecting...');
-                window.location.href = 'https://clipandship.ca/#/app';
+                // Redirect to app page
+                window.location.href = 'https://clipandship.ca/app';
               }
-            }, 3000);
+            }, 1500);
           }, 500);
         </script>
       </body>
