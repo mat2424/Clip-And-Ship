@@ -1,7 +1,7 @@
 
-import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { openGlobalAuthModal } from "@/hooks/useAuthModal";
 
 export const CallToActionSection = () => {
   return (
@@ -13,12 +13,13 @@ export const CallToActionSection = () => {
         <p className="text-gray-300 text-lg mb-8">
           No credit card required. Get started in minutes and see the power of AI-driven video creation.
         </p>
-        <Link to="/auth" className="inline-block">
-          <Button className="bg-cool-turquoise hover:bg-cool-turquoise-hover text-cool-charcoal px-8 py-4 text-lg font-medium rounded-lg transition-colors">
-            Get Started Free
-            <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
-        </Link>
+        <Button 
+          className="bg-cool-turquoise hover:bg-cool-turquoise-hover text-cool-charcoal px-8 py-4 text-lg font-medium rounded-lg transition-colors"
+          onClick={openGlobalAuthModal}
+        >
+          Get Started Free
+          <ArrowRight className="w-5 h-5 ml-2" />
+        </Button>
       </div>
     </section>
   );

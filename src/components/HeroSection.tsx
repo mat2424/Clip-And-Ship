@@ -1,7 +1,7 @@
 
-import { Link } from "react-router-dom";
 import { Play, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { openGlobalAuthModal } from "@/hooks/useAuthModal";
 
 export const HeroSection = () => {
   const handleWatchDemo = () => {
@@ -20,12 +20,13 @@ export const HeroSection = () => {
             No video editing skills required.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth" className="inline-block">
-              <Button className="bg-cool-turquoise hover:bg-cool-turquoise-hover text-cool-charcoal px-8 py-4 text-lg font-medium rounded-lg transition-colors">
-                Start Creating Videos
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
+            <Button 
+              className="bg-cool-turquoise hover:bg-cool-turquoise-hover text-cool-charcoal px-8 py-4 text-lg font-medium rounded-lg transition-colors"
+              onClick={openGlobalAuthModal}
+            >
+              Start Creating Videos
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
             <Button 
               variant="outline" 
               className="border-cool-turquoise text-cool-turquoise hover:bg-cool-turquoise/10 px-8 py-4 text-lg font-medium rounded-lg"

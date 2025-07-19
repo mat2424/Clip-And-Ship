@@ -11,13 +11,13 @@ import { User, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { MobileDropdown } from "@/components/MobileDropdown";
+import { AuthModal } from "@/components/AuthModal";
 const Index = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({
@@ -80,20 +80,24 @@ const Index = () => {
                   </Button>
                 </div>}
               
-              {!user && <Link to="/auth">
-                  <Button variant="outline" size="sm">
-                    Sign In
-                  </Button>
-                </Link>}
+              {!user && <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowAuthModal(true)}
+                >
+                  Sign In
+                </Button>}
             </div>
 
             {/* Mobile Navigation */}
             <div className="md:hidden">
-              {user ? <MobileDropdown user={user} onSignOut={handleSignOut} /> : <Link to="/auth">
-                  <Button variant="outline" size="sm">
-                    Sign In
-                  </Button>
-                </Link>}
+              {user ? <MobileDropdown user={user} onSignOut={handleSignOut} /> : <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowAuthModal(true)}
+                >
+                  Sign In
+                </Button>}
             </div>
           </div>
         </div>
@@ -115,6 +119,13 @@ const Index = () => {
           </div>
         </div>
       </main>
+
+      {/* Auth Modal */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => setShowAuthModal(false)}
+      />
     </div>;
 };
 export default Index;
