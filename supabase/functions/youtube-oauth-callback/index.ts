@@ -1,11 +1,14 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Cross-Origin-Opener-Policy': 'unsafe-none',
   'Cross-Origin-Embedder-Policy': 'unsafe-none',
+  'Referrer-Policy': 'no-referrer-when-downgrade',
 };
 
 serve(async (req) => {
@@ -26,11 +29,8 @@ serve(async (req) => {
       hasServiceKey: !!supabaseServiceKey,
       hasGoogleClientId: !!googleClientId,
       hasGoogleClientSecret: !!googleClientSecret,
-      supabaseUrlLength: supabaseUrl?.length || 0,
-      googleClientIdLength: googleClientId?.length || 0
     });
 
-    // More detailed error reporting
     const missingVars = [];
     if (!supabaseUrl) missingVars.push('SUPABASE_URL');
     if (!supabaseServiceKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
@@ -51,11 +51,13 @@ serve(async (req) => {
     const authCode = searchParams.get('code');
     const state = searchParams.get('state');
     const error = searchParams.get('error');
+    const sessionId = searchParams.get('session_id');
 
     console.log(`📋 [${requestId}] OAuth callback received`, {
       hasCode: !!authCode,
       hasState: !!state,
       error: error,
+      sessionId: sessionId,
     });
 
     if (error) {
@@ -67,7 +69,6 @@ serve(async (req) => {
     }
 
     // Extract and validate user ID from state
-    // State format: userId-timestamp-randomUUID
     const stateParts = state.split('-');
     if (stateParts.length < 2) {
       console.error(`❌ [${requestId}] Invalid state format: ${state}`);
@@ -75,94 +76,28 @@ serve(async (req) => {
     }
 
     const userId = stateParts[0];
-    const timestamp = stateParts[1];
+    const timestamp = parseInt(stateParts[1]);
 
     if (!userId || !timestamp) {
       console.error(`❌ [${requestId}] Missing userId or timestamp in state: ${state}`);
       throw new Error('Invalid state parameter');
     }
 
-    // Check state age (30 minutes for better reliability)
-    const stateAge = Date.now() - parseInt(timestamp);
-    const maxAge = 30 * 60 * 1000; // 30 minutes
+    // Check state age (45 minutes for better UX)
+    const stateAge = Date.now() - (timestamp * 1000);
+    const maxAge = 45 * 60 * 1000; // 45 minutes
     console.log(`🕐 [${requestId}] State age: ${Math.round(stateAge / 1000)}s (max: ${Math.round(maxAge / 1000)}s)`);
 
     if (stateAge > maxAge) {
-      console.error(`❌ [${requestId}] OAuth session expired. Age: ${Math.round(stateAge / 1000)}s, Max: ${Math.round(maxAge / 1000)}s`);
-      // Instead of throwing an error, redirect back to app with error
-      const errorHtml = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Session Expired</title>
-            <style>
-              body { 
-                font-family: system-ui, sans-serif; 
-                text-align: center; 
-                padding: 60px 20px;
-                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-                color: white;
-                min-height: 100vh;
-                margin: 0;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-              }
-              .container {
-                max-width: 400px;
-                margin: 0 auto;
-                background: rgba(255,255,255,0.1);
-                padding: 40px;
-                border-radius: 12px;
-                backdrop-filter: blur(10px);
-              }
-              .error-icon { font-size: 48px; margin-bottom: 20px; }
-              .title { font-size: 24px; font-weight: 600; margin-bottom: 10px; }
-              .subtitle { font-size: 16px; opacity: 0.9; margin-bottom: 30px; }
-              .retry-btn { 
-                background: rgba(255,255,255,0.2); 
-                border: none; 
-                color: white; 
-                padding: 12px 24px; 
-                border-radius: 6px; 
-                cursor: pointer;
-                font-size: 14px;
-                text-decoration: none;
-                display: inline-block;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="error-icon">⏰</div>
-              <div class="title">Session Expired</div>
-              <div class="subtitle">Please try connecting to YouTube again</div>
-              <a href="https://clipandship.ca/connect-accounts" class="retry-btn">Try Again</a>
-            </div>
-            <script>
-              setTimeout(() => {
-                window.location.href = 'https://clipandship.ca/connect-accounts?error=session_expired';
-              }, 3000);
-            </script>
-          </body>
-        </html>
-      `;
-      
-      return new Response(errorHtml, {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'text/html',
-        },
-      });
+      console.error(`❌ [${requestId}] OAuth session expired`);
+      return createErrorPage('Session Expired', 'Please try connecting to YouTube again', sessionId);
     }
 
     console.log(`🔄 [${requestId}] Processing OAuth for user: ${userId}`);
 
     // Exchange authorization code for tokens
     const redirectUri = `${supabaseUrl}/functions/v1/youtube-oauth-callback`;
-    console.log(`🔄 [${requestId}] Exchanging code for tokens with redirect URI: ${redirectUri}`);
-
+    
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -181,7 +116,7 @@ serve(async (req) => {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error(`❌ [${requestId}] Token exchange failed (${tokenResponse.status}):`, errorText);
-      throw new Error(`Token exchange failed (${tokenResponse.status}): ${errorText}`);
+      throw new Error(`Token exchange failed: ${errorText}`);
     }
 
     const tokenData = await tokenResponse.json();
@@ -192,13 +127,10 @@ serve(async (req) => {
 
     console.log(`✅ [${requestId}] Tokens received successfully`);
 
-    // Verify access token and get channel info with YouTube API
+    // Get channel info from YouTube API
     let channelName = 'YouTube Channel';
-    let channelId = null;
     
     try {
-      console.log(`🔍 [${requestId}] Fetching channel info from YouTube API...`);
-      
       const channelResponse = await fetch(
         'https://www.googleapis.com/youtube/v3/channels?part=snippet,id&mine=true',
         {
@@ -209,43 +141,11 @@ serve(async (req) => {
         }
       );
 
-      console.log(`🔍 [${requestId}] YouTube API response status: ${channelResponse.status}`);
-      
       if (channelResponse.ok) {
         const channelData = await channelResponse.json();
-        console.log(`📋 [${requestId}] Channel API response:`, JSON.stringify(channelData, null, 2));
-        
         if (channelData.items && channelData.items.length > 0) {
-          const channel = channelData.items[0];
-          channelName = channel.snippet?.title || 'YouTube Channel';
-          channelId = channel.id;
-          console.log(`✅ [${requestId}] Channel verified: ${channelName} (ID: ${channelId})`);
-        } else {
-          console.warn(`⚠️ [${requestId}] No channels found in API response`);
-        }
-      } else {
-        const errorText = await channelResponse.text();
-        console.error(`❌ [${requestId}] YouTube API error (${channelResponse.status}):`, errorText);
-        
-        // Try alternative API call for channel info
-        console.log(`🔄 [${requestId}] Trying alternative API call...`);
-        const altResponse = await fetch(
-          'https://www.googleapis.com/youtube/v3/channels?part=snippet&forUsername=mine',
-          {
-            headers: {
-              'Authorization': `Bearer ${tokenData.access_token}`,
-              'Accept': 'application/json',
-            },
-          }
-        );
-        
-        if (altResponse.ok) {
-          const altData = await altResponse.json();
-          if (altData.items && altData.items.length > 0) {
-            channelName = altData.items[0].snippet?.title || 'YouTube Channel';
-            channelId = altData.items[0].id;
-            console.log(`✅ [${requestId}] Channel found via alternative API: ${channelName}`);
-          }
+          channelName = channelData.items[0].snippet?.title || 'YouTube Channel';
+          console.log(`✅ [${requestId}] Channel verified: ${channelName}`);
         }
       }
     } catch (apiError) {
@@ -255,8 +155,8 @@ serve(async (req) => {
     // Calculate token expiration
     const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000)).toISOString();
 
-    // Store tokens securely in database
-    const { data: savedToken, error: dbError } = await supabaseClient
+    // Store tokens in database
+    const { error: dbError } = await supabaseClient
       .from('youtube_tokens')
       .upsert({
         user_id: userId,
@@ -268,9 +168,7 @@ serve(async (req) => {
         scope: tokenData.scope || 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly'
       }, {
         onConflict: 'user_id'
-      })
-      .select()
-      .single();
+      });
 
     if (dbError) {
       console.error(`❌ [${requestId}] Database error:`, dbError);
@@ -279,196 +177,265 @@ serve(async (req) => {
 
     console.log(`✅ [${requestId}] YouTube connection saved for user ${userId}`);
 
-    // Return success page
-    const origin = req.headers.get('origin') || 'https://clipandship.ca';
-    const successHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>YouTube Connected Successfully</title>
-          <style>
-            body { 
-              font-family: system-ui, sans-serif; 
-              text-align: center; 
-              padding: 60px 20px;
-              background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
-              color: white;
-              min-height: 100vh;
-              margin: 0;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-            }
-            .container {
-              max-width: 400px;
-              margin: 0 auto;
-              background: rgba(255,255,255,0.1);
-              padding: 40px;
-              border-radius: 12px;
-              backdrop-filter: blur(10px);
-            }
-            .success-icon { font-size: 48px; margin-bottom: 20px; }
-            .title { font-size: 24px; font-weight: 600; margin-bottom: 10px; }
-            .subtitle { font-size: 16px; opacity: 0.9; margin-bottom: 30px; }
-            .loading { font-size: 14px; opacity: 0.8; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="success-icon">✅</div>
-            <div class="title">YouTube Connected!</div>
-            <div class="subtitle">Channel: ${channelName}</div>
-            <div class="loading">Redirecting you back to the app...</div>
-          </div>
-          <script>
-            console.log('YouTube OAuth success page loaded');
-
-            // Wait a moment for the page to fully load, then notify parent
-            setTimeout(() => {
-              console.log('Sending success message to parent window');
-
-              // Try multiple methods to communicate with parent
-              let messageSent = false;
-
-              // Method 1: Direct postMessage to opener
-              if (window.opener && !window.opener.closed) {
-                try {
-                  window.opener.postMessage({
-                    type: 'YOUTUBE_AUTH_SUCCESS',
-                    channelName: '` + channelName + `',
-                    timestamp: Date.now()
-                  }, '*');
-                  console.log('Success message sent to opener');
-                  messageSent = true;
-                } catch (e) {
-                  console.error('Failed to send message to opener:', e);
-                }
-              }
-
-              // Method 2: Try parent window
-              if (!messageSent && window.parent && window.parent !== window) {
-                try {
-                  window.parent.postMessage({
-                    type: 'YOUTUBE_AUTH_SUCCESS',
-                    channelName: '` + channelName + `',
-                    timestamp: Date.now()
-                  }, '*');
-                  console.log('Success message sent to parent');
-                  messageSent = true;
-                } catch (e) {
-                  console.error('Failed to send message to parent:', e);
-                }
-              }
-
-              // Method 3: Broadcast to all windows
-              if (!messageSent) {
-                try {
-                  // Use BroadcastChannel if available
-                  if (typeof BroadcastChannel !== 'undefined') {
-                    const channel = new BroadcastChannel('youtube-auth');
-                    channel.postMessage({
-                      type: 'YOUTUBE_AUTH_SUCCESS',
-                      channelName: '` + channelName + `',
-                      timestamp: Date.now()
-                    });
-                    console.log('Success message broadcast');
-                    messageSent = true;
-                  }
-                } catch (e) {
-                  console.error('Failed to broadcast message:', e);
-                }
-              }
-
-              // Close the popup after a delay
-              setTimeout(() => {
-                console.log('Attempting to close popup window');
-                try {
-                  if (window.opener && !window.opener.closed) {
-                    window.close();
-                  } else {
-                    // If no opener or opener is closed, redirect
-                    console.log('No valid opener, redirecting...');
-                    window.location.href = '` + origin + `/#/app';
-                  }
-                } catch (e) {
-                  console.error('Failed to close window:', e);
-                  window.location.href = '` + origin + `/#/app';
-                }
-              }, 3000);
-            }, 500);
-          </script>
-        </body>
-      </html>
-    `;
-
-    return new Response(successHtml, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/html',
-      },
-    });
+    // Return success page with multiple communication methods
+    return createSuccessPage(channelName, sessionId);
 
   } catch (error) {
     console.error(`💥 [${requestId}] OAuth callback error:`, error);
-    
-    const errorHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>YouTube Connection Failed</title>
-          <style>
-            body { 
-              font-family: system-ui, sans-serif; 
-              text-align: center; 
-              padding: 60px 20px;
-              background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-              color: white;
-              min-height: 100vh;
-              margin: 0;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-            }
-            .container {
-              max-width: 400px;
-              margin: 0 auto;
-              background: rgba(255,255,255,0.1);
-              padding: 40px;
-              border-radius: 12px;
-              backdrop-filter: blur(10px);
-            }
-            .error-icon { font-size: 48px; margin-bottom: 20px; }
-            .title { font-size: 24px; font-weight: 600; margin-bottom: 10px; }
-            .subtitle { font-size: 16px; opacity: 0.9; margin-bottom: 30px; }
-            .retry-btn { 
-              background: rgba(255,255,255,0.2); 
-              border: none; 
-              color: white; 
-              padding: 12px 24px; 
-              border-radius: 6px; 
-              cursor: pointer;
-              font-size: 14px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="error-icon">❌</div>
-            <div class="title">Connection Failed</div>
-            <div class="subtitle">` + (error instanceof Error ? error.message : 'Unknown error') + `</div>
-            <button class="retry-btn" onclick="window.close()">Close Window</button>
-          </div>
-        </body>
-      </html>
-    `;
-
-    return new Response(errorHtml, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/html',
-      },
-    });
+    return createErrorPage('Connection Failed', error instanceof Error ? error.message : 'Unknown error', sessionId);
   }
 });
+
+function createSuccessPage(channelName: string, sessionId?: string): Response {
+  const successHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>YouTube Connected Successfully</title>
+        <style>
+          body { 
+            font-family: system-ui, sans-serif; 
+            text-align: center; 
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: white;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+          .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+          }
+          .success-icon { font-size: 48px; margin-bottom: 20px; }
+          .title { font-size: 24px; font-weight: 600; margin-bottom: 10px; }
+          .subtitle { font-size: 16px; opacity: 0.9; margin-bottom: 30px; }
+          .loading { font-size: 14px; opacity: 0.8; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="success-icon">✅</div>
+          <div class="title">YouTube Connected!</div>
+          <div class="subtitle">Channel: ${channelName}</div>
+          <div class="loading">Closing this window...</div>
+        </div>
+        <script>
+          console.log('YouTube OAuth success page loaded');
+          
+          const sessionId = '${sessionId || ''}';
+          const channelName = '${channelName}';
+          const successData = {
+            type: 'YOUTUBE_AUTH_SUCCESS',
+            channelName: channelName,
+            timestamp: Date.now(),
+            sessionId: sessionId
+          };
+
+          // Wait for page to load, then communicate success
+          setTimeout(() => {
+            console.log('Attempting to communicate success to parent window');
+            
+            // Method 1: PostMessage to opener (may not work due to COOP)
+            try {
+              if (window.opener && !window.opener.closed) {
+                window.opener.postMessage(successData, '*');
+                console.log('✅ Success message sent to opener');
+              }
+            } catch (e) {
+              console.log('📊 Cannot communicate with opener due to COOP:', e.message);
+            }
+
+            // Method 2: PostMessage to parent (for iframe scenarios)
+            try {
+              if (window.parent && window.parent !== window) {
+                window.parent.postMessage(successData, '*');
+                console.log('✅ Success message sent to parent');
+              }
+            } catch (e) {
+              console.log('📊 Cannot communicate with parent due to COOP:', e.message);
+            }
+
+            // Method 3: BroadcastChannel API (modern browsers)
+            try {
+              if (typeof BroadcastChannel !== 'undefined' && sessionId) {
+                const channel = new BroadcastChannel(\`youtube_auth_\${sessionId}\`);
+                channel.postMessage(successData);
+                console.log('✅ Success message broadcast via BroadcastChannel');
+                channel.close();
+              }
+            } catch (e) {
+              console.log('📊 BroadcastChannel failed:', e.message);
+            }
+
+            // Method 4: LocalStorage (cross-tab communication)
+            try {
+              if (sessionId) {
+                localStorage.setItem(\`youtube_auth_result_\${sessionId}\`, JSON.stringify({
+                  success: true,
+                  channelName: channelName,
+                  timestamp: Date.now()
+                }));
+                console.log('✅ Success stored in localStorage');
+                
+                // Trigger storage event
+                window.dispatchEvent(new StorageEvent('storage', {
+                  key: \`youtube_auth_result_\${sessionId}\`,
+                  newValue: JSON.stringify({ success: true, channelName: channelName })
+                }));
+              }
+            } catch (e) {
+              console.log('📊 localStorage communication failed:', e.message);
+            }
+
+            // Method 5: Custom event (last resort)
+            try {
+              const event = new CustomEvent('youtubeAuthSuccess', {
+                detail: successData
+              });
+              window.dispatchEvent(event);
+              console.log('✅ Custom event dispatched');
+            } catch (e) {
+              console.log('📊 Custom event failed:', e.message);
+            }
+
+            // Close the popup after a delay
+            setTimeout(() => {
+              console.log('Attempting to close popup window');
+              try {
+                window.close();
+              } catch (e) {
+                console.log('📊 Cannot close window, redirecting...');
+                window.location.href = 'https://clipandship.ca/#/app';
+              }
+            }, 3000);
+          }, 500);
+        </script>
+      </body>
+    </html>
+  `;
+
+  return new Response(successHtml, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/html',
+    },
+  });
+}
+
+function createErrorPage(title: string, message: string, sessionId?: string): Response {
+  const errorHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>YouTube Connection Failed</title>
+        <style>
+          body { 
+            font-family: system-ui, sans-serif; 
+            text-align: center; 
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+          .container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+          }
+          .error-icon { font-size: 48px; margin-bottom: 20px; }
+          .title { font-size: 24px; font-weight: 600; margin-bottom: 10px; }
+          .subtitle { font-size: 16px; opacity: 0.9; margin-bottom: 30px; }
+          .retry-btn { 
+            background: rgba(255,255,255,0.2); 
+            border: none; 
+            color: white; 
+            padding: 12px 24px; 
+            border-radius: 6px; 
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="error-icon">❌</div>
+          <div class="title">${title}</div>
+          <div class="subtitle">${message}</div>
+          <a href="https://clipandship.ca/#/app" class="retry-btn">Return to App</a>
+        </div>
+        <script>
+          console.log('YouTube OAuth error page loaded');
+          
+          const sessionId = '${sessionId || ''}';
+          const errorData = {
+            type: 'YOUTUBE_AUTH_ERROR',
+            error: '${message}',
+            timestamp: Date.now(),
+            sessionId: sessionId
+          };
+
+          // Communicate error to parent window using multiple methods
+          setTimeout(() => {
+            // Method 1: PostMessage (may not work due to COOP)
+            try {
+              if (window.opener && !window.opener.closed) {
+                window.opener.postMessage(errorData, '*');
+              }
+            } catch (e) {
+              console.log('Cannot communicate with opener due to COOP');
+            }
+
+            // Method 2: BroadcastChannel
+            try {
+              if (typeof BroadcastChannel !== 'undefined' && sessionId) {
+                const channel = new BroadcastChannel(\`youtube_auth_\${sessionId}\`);
+                channel.postMessage(errorData);
+                channel.close();
+              }
+            } catch (e) {
+              console.log('BroadcastChannel failed');
+            }
+
+            // Method 3: LocalStorage
+            try {
+              if (sessionId) {
+                localStorage.setItem(\`youtube_auth_result_\${sessionId}\`, JSON.stringify({
+                  success: false,
+                  error: '${message}',
+                  timestamp: Date.now()
+                }));
+              }
+            } catch (e) {
+              console.log('localStorage failed');
+            }
+          }, 500);
+        </script>
+      </body>
+    </html>
+  `;
+
+  return new Response(errorHtml, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/html',
+    },
+  });
+}

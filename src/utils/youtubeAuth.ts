@@ -228,14 +228,16 @@ export function openYouTubeAuthRedirect(): Promise<void> {
 }
 
 /**
- * Open YouTube OAuth in popup window (simplified and more reliable)
+ * Enhanced YouTube OAuth popup with better COOP handling
  */
 export function openYouTubeAuthPopup(): Promise<void> {
   return new Promise(async (resolve, reject) => {
     let popup: Window | null = null;
     let checkInterval: NodeJS.Timeout | null = null;
     let timeoutId: NodeJS.Timeout | null = null;
+    let broadcastChannel: BroadcastChannel | null = null;
     let resolved = false;
+    const sessionId = Math.random().toString(36).substring(2);
 
     const cleanup = () => {
       if (checkInterval) {
@@ -246,61 +248,82 @@ export function openYouTubeAuthPopup(): Promise<void> {
         clearTimeout(timeoutId);
         timeoutId = null;
       }
+      if (broadcastChannel) {
+        broadcastChannel.close();
+        broadcastChannel = null;
+      }
       window.removeEventListener('message', messageHandler);
+      window.removeEventListener('storage', storageHandler);
     };
 
-    const messageHandler = (event: MessageEvent) => {
-      console.log('📨 Received message:', event.data);
+    const finishAuth = (success: boolean, error?: string) => {
+      if (resolved) return;
+      resolved = true;
       
-      if (event.data?.type === 'YOUTUBE_AUTH_SUCCESS' && !resolved) {
-        resolved = true;
-        console.log('✅ YouTube auth success!');
-        cleanup();
-        
-        try {
-          if (popup && !popup.closed) {
-            popup.close();
-          }
-        } catch (error) {
-          console.log('📊 Cannot close popup due to COOP restrictions');
+      console.log(success ? '✅ YouTube auth completed successfully!' : '❌ YouTube auth failed:', error);
+      cleanup();
+      
+      // Attempt to close popup (will fail silently due to COOP)
+      try {
+        if (popup && !popup.closed) {
+          popup.close();
         }
-        
+      } catch (e) {
+        console.log('📊 Cannot close popup due to COOP restrictions');
+      }
+      
+      if (success) {
         resolve();
-      } else if (event.data?.type === 'YOUTUBE_AUTH_ERROR' && !resolved) {
-        resolved = true;
-        console.log('❌ YouTube auth error:', event.data.error);
-        cleanup();
-        
-        try {
-          if (popup && !popup.closed) {
-            popup.close();
-          }
-        } catch (error) {
-          console.log('📊 Cannot close popup due to COOP restrictions');
-        }
-        
-        reject(new Error(event.data.error || 'Authentication failed'));
+      } else {
+        reject(new Error(error || 'Authentication failed'));
       }
     };
 
-    // Function to check auth status by polling
+    // Method 1: PostMessage handler (may not work due to COOP)
+    const messageHandler = (event: MessageEvent) => {
+      console.log('📨 Received message:', event.data);
+      
+      if (event.data?.type === 'YOUTUBE_AUTH_SUCCESS' && event.data?.sessionId === sessionId) {
+        finishAuth(true);
+      } else if (event.data?.type === 'YOUTUBE_AUTH_ERROR' && event.data?.sessionId === sessionId) {
+        finishAuth(false, event.data.error);
+      }
+    };
+
+    // Method 2: LocalStorage handler (cross-tab communication)
+    const storageHandler = (event: StorageEvent) => {
+      if (event.key === `youtube_auth_result_${sessionId}`) {
+        const result = event.newValue ? JSON.parse(event.newValue) : null;
+        if (result) {
+          localStorage.removeItem(`youtube_auth_result_${sessionId}`);
+          if (result.success) {
+            finishAuth(true);
+          } else {
+            finishAuth(false, result.error);
+          }
+        }
+      }
+    };
+
+    // Method 3: BroadcastChannel (modern browsers)
+    if (typeof BroadcastChannel !== 'undefined') {
+      broadcastChannel = new BroadcastChannel(`youtube_auth_${sessionId}`);
+      broadcastChannel.onmessage = (event) => {
+        console.log('📡 Received broadcast:', event.data);
+        if (event.data?.type === 'YOUTUBE_AUTH_SUCCESS') {
+          finishAuth(true);
+        } else if (event.data?.type === 'YOUTUBE_AUTH_ERROR') {
+          finishAuth(false, event.data.error);
+        }
+      };
+    }
+
+    // Function to check auth status by polling database
     const checkAuthStatus = async () => {
       try {
         const status = await getYouTubeAuthStatus();
-        if (status.isConnected && !resolved) {
-          resolved = true;
-          console.log('✅ YouTube auth detected via polling!');
-          cleanup();
-
-          try {
-            if (popup && !popup.closed) {
-              popup.close();
-            }
-          } catch (error) {
-            console.log('📊 Cannot close popup due to COOP restrictions');
-          }
-
-          resolve();
+        if (status.isConnected) {
+          finishAuth(true);
         }
       } catch (error) {
         console.log('📊 Auth status check failed:', error);
@@ -309,55 +332,48 @@ export function openYouTubeAuthPopup(): Promise<void> {
 
     try {
       const authUrl = await initiateYouTubeAuth();
-      console.log('🚀 Opening YouTube auth popup:', authUrl);
+      
+      // Add session ID to auth URL for tracking
+      const urlWithSession = new URL(authUrl);
+      urlWithSession.searchParams.set('session_id', sessionId);
+      
+      console.log('🚀 Opening YouTube auth popup with session:', sessionId);
 
+      // Open popup with minimal restrictions
       popup = window.open(
-        authUrl,
+        urlWithSession.toString(),
         'youtube-auth',
-        'width=500,height=650,scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no,noopener=no,noreferrer=no'
+        'width=500,height=700,scrollbars=yes,resizable=yes,status=yes,toolbar=no,menubar=no,location=no'
       );
 
       if (!popup) {
-        throw new Error('Failed to open popup window. Please allow popups for this site.');
+        throw new Error('Failed to open popup window. Please allow popups for this site and try again.');
       }
 
-      // Listen for messages from popup
+      // Set up event listeners
       window.addEventListener('message', messageHandler);
+      window.addEventListener('storage', storageHandler);
 
-      // Poll for popup closure and auth status
+      // Poll for popup status and auth completion
       checkInterval = setInterval(() => {
+        // Check if popup is still open (may not work due to COOP)
         try {
-          // Try to check if popup is closed, but handle COOP errors gracefully
           if (popup && popup.closed && !resolved) {
-            resolved = true;
-            cleanup();
-            reject(new Error('Authentication cancelled'));
+            finishAuth(false, 'Authentication cancelled by user');
             return;
           }
         } catch (error) {
-          // If we can't access popup.closed due to COOP, rely only on polling
-          console.log('📊 Cannot check popup status due to COOP, relying on polling');
+          // COOP prevents checking popup.closed, continue with other methods
         }
 
-        // Check auth status every 3 seconds
+        // Check database for successful auth
         checkAuthStatus();
-      }, 3000);
+      }, 2000);
 
-      // Set a timeout for the auth process (10 minutes)
+      // Set timeout for auth process (45 minutes for better UX)
       timeoutId = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          cleanup();
-          try {
-            if (popup && !popup.closed) {
-              popup.close();
-            }
-          } catch (error) {
-            console.log('📊 Cannot close popup due to COOP restrictions');
-          }
-          reject(new Error('Authentication timeout'));
-        }
-      }, 10 * 60 * 1000);
+        finishAuth(false, 'Authentication timeout - please try again');
+      }, 45 * 60 * 1000);
 
     } catch (error) {
       cleanup();

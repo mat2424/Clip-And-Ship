@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -52,7 +53,7 @@ serve(async (req) => {
       );
     }
 
-    // Generate secure state parameter with current timestamp
+    // Generate secure state parameter with current timestamp (45 minutes validity)
     const timestamp = Math.floor(Date.now() / 1000); // Current time in seconds
     const state = `${user.id}-${timestamp}-${crypto.randomUUID()}`;
     
@@ -69,12 +70,13 @@ serve(async (req) => {
     authUrl.searchParams.set('prompt', 'consent');
     authUrl.searchParams.set('state', state);
 
-    console.log(`🚀 YouTube OAuth initiated for user ${user.id}`);
+    console.log(`🚀 YouTube OAuth initiated for user ${user.id} with 45-minute session validity`);
 
     return new Response(
       JSON.stringify({ 
         authUrl: authUrl.toString(),
         state,
+        sessionTimeout: 45 * 60 * 1000, // 45 minutes in milliseconds
         message: 'Redirect user to authUrl for YouTube authorization'
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

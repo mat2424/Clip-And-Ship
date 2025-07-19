@@ -1,13 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Youtube, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Youtube, CheckCircle, AlertCircle, Loader2, RefreshCw, Bug } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import {
   getYouTubeAuthStatus,
-  openYouTubeAuthRedirect,
   openYouTubeAuthPopup,
   disconnectYouTube,
   testYouTubeConnection,
@@ -19,6 +19,7 @@ export const YouTubeConnector: React.FC = () => {
   const [authStatus, setAuthStatus] = useState<YouTubeAuthStatus>({ isConnected: false });
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
 
   const checkAuthStatus = async () => {
@@ -39,10 +40,17 @@ export const YouTubeConnector: React.FC = () => {
 
   const handleConnect = async () => {
     setIsConnecting(true);
+    setRetryCount(prev => prev + 1);
+    
     try {
-      console.log('🔄 Starting YouTube OAuth using popup...');
+      console.log('🔄 Starting YouTube OAuth using enhanced popup...');
 
-      // Use popup approach for better reliability
+      // Show initial feedback
+      toast({
+        title: "Opening YouTube Authorization",
+        description: "A popup window will open for YouTube authorization. Please allow popups if blocked.",
+      });
+
       await openYouTubeAuthPopup();
 
       // Refresh auth status after successful connection
@@ -53,14 +61,29 @@ export const YouTubeConnector: React.FC = () => {
         description: "Your YouTube account has been connected successfully!",
       });
 
+      setRetryCount(0); // Reset retry count on success
+
     } catch (error) {
       console.error('❌ YouTube connection failed:', error);
       const errorMessage = error instanceof Error ? error.message : "Failed to connect YouTube account";
 
+      let userMessage = errorMessage;
+      let variant: "default" | "destructive" = "destructive";
+
+      // Provide specific guidance based on error type
+      if (errorMessage.includes('popup')) {
+        userMessage = "Please allow popups for this site and try again. Check your browser's popup blocker settings.";
+      } else if (errorMessage.includes('timeout')) {
+        userMessage = "Connection timed out. Please try again and complete the authorization quickly.";
+      } else if (errorMessage.includes('cancelled')) {
+        userMessage = "Authorization was cancelled. Please try again if you want to connect YouTube.";
+        variant = "default";
+      }
+
       toast({
         title: "Connection Failed",
-        description: errorMessage,
-        variant: "destructive",
+        description: userMessage,
+        variant: variant,
       });
     } finally {
       setIsConnecting(false);
@@ -228,10 +251,16 @@ export const YouTubeConnector: React.FC = () => {
                 ) : (
                   <>
                     <Youtube className="mr-2 h-4 w-4" />
-                    Connect YouTube
+                    Connect YouTube {retryCount > 0 && `(Attempt ${retryCount + 1})`}
                   </>
                 )}
               </Button>
+              
+              {retryCount > 0 && (
+                <div className="text-sm text-muted-foreground bg-blue-50 p-2 rounded">
+                  <strong>Tip:</strong> If the popup is blocked, please allow popups for this site in your browser settings.
+                </div>
+              )}
               
               <div className="flex gap-2">
                 {authStatus.error && (
@@ -241,6 +270,7 @@ export const YouTubeConnector: React.FC = () => {
                     size="sm"
                     className="flex-1"
                   >
+                    <RefreshCw className="mr-1 h-3 w-3" />
                     Refresh Status
                   </Button>
                 )}
@@ -250,6 +280,7 @@ export const YouTubeConnector: React.FC = () => {
                   size="sm"
                   className="flex-1"
                 >
+                  <Bug className="mr-1 h-3 w-3" />
                   Debug OAuth
                 </Button>
               </div>
