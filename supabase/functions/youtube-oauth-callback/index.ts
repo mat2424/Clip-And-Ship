@@ -68,18 +68,22 @@ serve(async (req) => {
       throw new Error('Missing required OAuth parameters');
     }
 
-    // Extract and validate user ID from state
-    const stateParts = state.split('-');
-    if (stateParts.length < 2) {
-      console.error(`❌ [${requestId}] Invalid state format: ${state}`);
-      throw new Error('Invalid state parameter');
+    // Extract and validate user ID from state (Base64 encoded JSON)
+    let stateData;
+    try {
+      const decodedState = atob(state);
+      stateData = JSON.parse(decodedState);
+      console.log(`🔍 [${requestId}] Decoded state data:`, { hasUserId: !!stateData.user_id, hasTimestamp: !!stateData.timestamp, hasNonce: !!stateData.nonce });
+    } catch (decodeError) {
+      console.error(`❌ [${requestId}] Failed to decode state: ${state}`, decodeError);
+      throw new Error('Invalid state parameter format');
     }
 
-    const userId = stateParts[0];
-    const timestamp = parseInt(stateParts[1]);
+    const userId = stateData.user_id;
+    const timestamp = stateData.timestamp;
 
     if (!userId || !timestamp) {
-      console.error(`❌ [${requestId}] Missing userId or timestamp in state: ${state}`);
+      console.error(`❌ [${requestId}] Missing userId or timestamp in state data:`, stateData);
       throw new Error('Invalid state parameter');
     }
 
@@ -182,6 +186,9 @@ serve(async (req) => {
 
   } catch (error) {
     console.error(`💥 [${requestId}] OAuth callback error:`, error);
+    // Extract sessionId from URL params if available
+    const { searchParams } = new URL(req.url);
+    const sessionId = searchParams.get('session_id');
     return createErrorPage('Connection Failed', error instanceof Error ? error.message : 'Unknown error', sessionId);
   }
 });
