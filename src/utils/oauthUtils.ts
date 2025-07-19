@@ -244,14 +244,14 @@ const initiateYouTubeOAuth = async () => {
     
     console.log('✅ YouTube OAuth response:', data);
     
-    if (data?.authUrl) {
-      console.log('🚀 Redirecting to Google OAuth:', data.authUrl);
+    if (data?.auth_url) {
+      console.log('🚀 Redirecting to Google OAuth:', data.auth_url);
       
       // Store a flag to know we initiated YouTube OAuth
       localStorage.setItem('youtube_oauth_initiated', 'true');
       localStorage.setItem('youtube_oauth_timestamp', Date.now().toString());
       
-      window.location.href = data.authUrl;
+      window.location.href = data.auth_url;
       return { data: null, error: null };
     } else {
       throw new Error('No OAuth URL returned from edge function');
