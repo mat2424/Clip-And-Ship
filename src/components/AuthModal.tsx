@@ -174,7 +174,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
               <div className="flex justify-center">
                 <ReCAPTCHA
                   ref={recaptchaRef}
-                  sitekey="6LfYxKkqAAAAACvPAf6bBGTf6YEYu3w8nOl8zJAd"
+                  sitekey="6Lf05ogrAAAAAHUfV4lDhivh3j9pUa2cE-Mzgg9s"
                   onChange={onRecaptchaChange}
                   theme="dark"
                 />
