@@ -111,7 +111,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 alt="Clip & Ship AI Logo" 
                 className="w-8 h-8"
               />
-              <DialogTitle className="text-xl font-bold">
+            <DialogTitle className="text-xl font-bold text-foreground">
                 Clip & Ship
               </DialogTitle>
             </div>

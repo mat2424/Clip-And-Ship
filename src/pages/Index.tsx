@@ -5,7 +5,7 @@ import { VideoIdeaForm } from "@/components/VideoIdeaForm";
 import { VideoIdeasList } from "@/components/VideoIdeasList";
 import { CreditBalance } from "@/components/CreditBalance";
 import { PricingSection } from "@/components/PricingSection";
-import { SocialAccountsManager } from "@/components/SocialAccountsManager";
+
 import { Button } from "@/components/ui/button";
 import { User, LogOut } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -112,10 +112,9 @@ const Index = () => {
             <VideoIdeasList />
           </div>
 
-          {/* Right Column - Pricing & Social Accounts */}
+          {/* Right Column - Pricing */}
           <div className="lg:col-span-1 space-y-8">
             <PricingSection />
-            <SocialAccountsManager />
           </div>
         </div>
       </main>
