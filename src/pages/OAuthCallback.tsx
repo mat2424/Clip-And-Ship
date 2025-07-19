@@ -260,11 +260,11 @@ const OAuthCallback = () => {
           </p>
           
           <Link
-            to="/connect-accounts"
+            to="/app"
             className="inline-flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Connect Accounts</span>
+            <span>Back to Dashboard</span>
           </Link>
         </div>
       </div>
@@ -282,11 +282,11 @@ const OAuthCallback = () => {
         </p>
         
         <Link
-          to="/connect-accounts"
+          to="/app"
           className="inline-flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Connect Accounts</span>
+          <span>Back to Dashboard</span>
         </Link>
       </div>
     </div>
