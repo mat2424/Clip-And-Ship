@@ -25,13 +25,13 @@ export async function initiateYouTubeAuth(): Promise<string> {
       throw new Error(error.message);
     }
 
-    if (!data?.authUrl) {
+    if (!data?.auth_url) {
       console.error('❌ No auth URL received:', data);
       throw new Error('No auth URL received');
     }
 
-    console.log('✅ Auth URL received:', data.authUrl);
-    return data.authUrl;
+    console.log('✅ Auth URL received:', data.auth_url);
+    return data.auth_url;
   } catch (error) {
     console.error('💥 YouTube auth initiation failed:', error);
     throw error;
