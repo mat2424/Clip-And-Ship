@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ExternalLink, Eye, Upload, Check, X, PlayCircle, Edit3 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ExternalLink, Eye, Upload, Check, X, PlayCircle, Edit3, Plus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VideoIdeaStatusBadge } from "./VideoIdeaStatusBadge";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,18 @@ import { useToast } from "@/hooks/use-toast";
 import { ExpandableCaption } from "@/components/ExpandableCaption";
 import { UserPlanDisplay } from "@/components/UserPlanDisplay";
 import { useSocialTokens } from "@/hooks/useSocialTokens";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+// Platform configuration with tier requirements
+const AVAILABLE_PLATFORMS = [
+  { name: 'YouTube', tier: 'free' },
+  { name: 'Instagram', tier: 'premium' },
+  { name: 'TikTok', tier: 'premium' },
+  { name: 'Facebook', tier: 'pro' },
+  { name: 'X (Twitter)', tier: 'pro' },
+  { name: 'LinkedIn', tier: 'pro' }
+];
 interface VideoIdea {
   id: string;
   idea_text: string;
@@ -81,6 +93,8 @@ export const VideoIdeaItem = ({
   const [rejectionReason, setRejectionReason] = useState("");
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(idea.idea_text);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(idea.selected_platforms);
+  const [userTier, setUserTier] = useState<string>('free');
   const {
     toast
   } = useToast();
@@ -88,6 +102,69 @@ export const VideoIdeaItem = ({
     connectedAccounts
   } = useSocialTokens();
   const videoUrl = idea.video_url || idea.preview_video_url;
+
+  // Fetch user tier on component mount
+  useEffect(() => {
+    const fetchUserTier = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('subscription_tier')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile) {
+            setUserTier(profile.subscription_tier || 'free');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user tier:', error);
+      }
+    };
+    
+    fetchUserTier();
+  }, []);
+
+  // Check if platform can be selected based on user tier
+  const canSelectPlatform = (platform: { name: string; tier: string }) => {
+    if (userTier === 'pro') return true;
+    if (userTier === 'premium' && ['free', 'premium'].includes(platform.tier)) return true;
+    if (userTier === 'free' && platform.tier === 'free') return true;
+    return false;
+  };
+
+  // Handle platform selection changes
+  const handlePlatformToggle = (platformName: string, checked: boolean) => {
+    const newPlatforms = checked 
+      ? [...selectedPlatforms, platformName]
+      : selectedPlatforms.filter(p => p !== platformName);
+    
+    setSelectedPlatforms(newPlatforms);
+    
+    // Update the database
+    updateSelectedPlatforms(newPlatforms);
+  };
+
+  // Update selected platforms in database
+  const updateSelectedPlatforms = async (platforms: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('video_ideas')
+        .update({ selected_platforms: platforms })
+        .eq('id', idea.id);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating platforms:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update platforms. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
   const handleApprove = async () => {
     // Check if user has connected at least one social account
     if (connectedAccounts.length === 0) {
@@ -102,7 +179,7 @@ export const VideoIdeaItem = ({
     try {
       // Build social accounts object with OAuth tokens
       const socialAccounts: Record<string, any> = {};
-      idea.selected_platforms.forEach(platform => {
+      selectedPlatforms.forEach(platform => {
         const token = connectedAccounts.find(t => t.platform === platform.toLowerCase());
         if (token) {
           socialAccounts[platform.toLowerCase()] = {
@@ -112,7 +189,40 @@ export const VideoIdeaItem = ({
           };
         }
       });
+
+      // Get YouTube account info
+      const youtubeAccount = connectedAccounts.find(t => t.platform === 'youtube');
+      
+      // Send webhook to N8N
+      const webhookPayload = {
+        video_title: idea.idea_text,
+        caption: idea.caption || '',
+        video_file_url: idea.video_url,
+        youtube_account_info: youtubeAccount ? {
+          access_token: youtubeAccount.access_token,
+          refresh_token: youtubeAccount.refresh_token,
+          expires_at: youtubeAccount.expires_at,
+          username: youtubeAccount.username
+        } : null,
+        selected_platforms: selectedPlatforms
+      };
+
+      // Send to webhook
+      const webhookResponse = await fetch('https://clipandshipproduction.app.n8n.cloud/webhook/video-approved', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+
+      if (!webhookResponse.ok) {
+        throw new Error(`Webhook failed: ${webhookResponse.status}`);
+      }
+
+      console.log('Webhook sent successfully');
       console.log('Sending approval with social accounts:', socialAccounts);
+      
       const {
         error
       } = await supabase.functions.invoke('approve-video', {
@@ -120,7 +230,7 @@ export const VideoIdeaItem = ({
           video_idea_id: idea.id,
           approved: true,
           social_accounts: socialAccounts,
-          selected_platforms: idea.selected_platforms
+          selected_platforms: selectedPlatforms
         }
       });
       if (error) throw error;
@@ -289,10 +399,65 @@ export const VideoIdeaItem = ({
         </div>
       </div>
       
-      <div className="flex flex-wrap gap-1 mb-4 overflow-hidden">
-        {idea.selected_platforms.map(platform => <span key={platform} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs md:text-sm whitespace-nowrap">
+      {/* Platform Selector */}
+      <div className="flex flex-wrap gap-2 mb-4 items-center">
+        {selectedPlatforms.map(platform => (
+          <span key={platform} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs md:text-sm whitespace-nowrap">
             {platform}
-          </span>)}
+          </span>
+        ))}
+        
+        {/* Platform Selector Dropdown */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="border-dashed">
+              <Plus className="w-3 h-3 mr-1" />
+              Add Platform
+              <ChevronDown className="w-3 h-3 ml-1" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-3" align="start">
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm mb-2">Select Platforms</h4>
+              {AVAILABLE_PLATFORMS.map((platform) => {
+                const isSelected = selectedPlatforms.includes(platform.name);
+                const canSelect = canSelectPlatform(platform);
+                
+                return (
+                  <div key={platform.name} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={platform.name}
+                      checked={isSelected}
+                      onCheckedChange={(checked) => handlePlatformToggle(platform.name, checked as boolean)}
+                      disabled={!canSelect && !isSelected}
+                    />
+                    <label
+                      htmlFor={platform.name}
+                      className={`text-sm flex-1 ${!canSelect && !isSelected ? 'text-gray-400' : 'text-gray-700'}`}
+                    >
+                      {platform.name}
+                      {!canSelect && !isSelected && (
+                        <span className="text-xs text-gray-400 ml-1">({platform.tier})</span>
+                      )}
+                    </label>
+                  </div>
+                );
+              })}
+              
+              {userTier === 'free' && (
+                <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                  Upgrade to Premium for Instagram & TikTok, or Pro for all platforms.
+                </div>
+              )}
+              
+              {userTier === 'premium' && (
+                <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+                  Upgrade to Pro for Facebook, X (Twitter), and LinkedIn.
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
       
       {/* Expandable Caption */}
