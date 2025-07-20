@@ -231,7 +231,7 @@ function createSuccessPage(channelName: string, sessionId?: string): Response {
           <div class="success-icon">✅</div>
           <div class="title">YouTube Connected!</div>
           <div class="subtitle">Channel: ${channelName}</div>
-          <div class="loading">Closing this window...</div>
+          <div class="loading">Redirecting...</div>
         </div>
         <script>
           console.log('YouTube OAuth success page loaded');
@@ -245,85 +245,70 @@ function createSuccessPage(channelName: string, sessionId?: string): Response {
             sessionId: sessionId
           };
 
-          // Wait for page to load, then communicate success
-          setTimeout(() => {
-            console.log('Attempting to communicate success to parent window');
-            
-            // Method 1: PostMessage to opener (may not work due to COOP)
-            try {
-              if (window.opener && !window.opener.closed) {
-                window.opener.postMessage(successData, '*');
-                console.log('✅ Success message sent to opener');
-              }
-            } catch (e) {
-              console.log('📊 Cannot communicate with opener due to COOP:', e.message);
+          // Immediately communicate success and redirect
+          console.log('Communicating success to parent window');
+          
+          // Method 1: PostMessage to opener
+          try {
+            if (window.opener && !window.opener.closed) {
+              window.opener.postMessage(successData, '*');
+              console.log('✅ Success message sent to opener');
             }
+          } catch (e) {
+            console.log('📊 Cannot communicate with opener due to COOP:', e.message);
+          }
 
-            // Method 2: PostMessage to parent (for iframe scenarios)
-            try {
-              if (window.parent && window.parent !== window) {
-                window.parent.postMessage(successData, '*');
-                console.log('✅ Success message sent to parent');
-              }
-            } catch (e) {
-              console.log('📊 Cannot communicate with parent due to COOP:', e.message);
+          // Method 2: PostMessage to parent (for iframe scenarios)
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage(successData, '*');
+              console.log('✅ Success message sent to parent');
             }
+          } catch (e) {
+            console.log('📊 Cannot communicate with parent due to COOP:', e.message);
+          }
 
-            // Method 3: BroadcastChannel API (modern browsers)
-            try {
-              if (typeof BroadcastChannel !== 'undefined' && sessionId) {
-                const channel = new BroadcastChannel(\`youtube_auth_\${sessionId}\`);
-                channel.postMessage(successData);
-                console.log('✅ Success message broadcast via BroadcastChannel');
-                channel.close();
-              }
-            } catch (e) {
-              console.log('📊 BroadcastChannel failed:', e.message);
+          // Method 3: BroadcastChannel API
+          try {
+            if (typeof BroadcastChannel !== 'undefined' && sessionId) {
+              const channel = new BroadcastChannel(\`youtube_auth_\${sessionId}\`);
+              channel.postMessage(successData);
+              console.log('✅ Success message broadcast via BroadcastChannel');
+              channel.close();
             }
+          } catch (e) {
+            console.log('📊 BroadcastChannel failed:', e.message);
+          }
 
-            // Method 4: LocalStorage (cross-tab communication)
-            try {
-              if (sessionId) {
-                localStorage.setItem(\`youtube_auth_result_\${sessionId}\`, JSON.stringify({
-                  success: true,
-                  channelName: channelName,
-                  timestamp: Date.now()
-                }));
-                console.log('✅ Success stored in localStorage');
-                
-                // Trigger storage event
-                window.dispatchEvent(new StorageEvent('storage', {
-                  key: \`youtube_auth_result_\${sessionId}\`,
-                  newValue: JSON.stringify({ success: true, channelName: channelName })
-                }));
-              }
-            } catch (e) {
-              console.log('📊 localStorage communication failed:', e.message);
+          // Method 4: LocalStorage (cross-tab communication)
+          try {
+            if (sessionId) {
+              localStorage.setItem(\`youtube_auth_result_\${sessionId}\`, JSON.stringify({
+                success: true,
+                channelName: channelName,
+                timestamp: Date.now()
+              }));
+              console.log('✅ Success stored in localStorage');
+              
+              // Trigger storage event
+              window.dispatchEvent(new StorageEvent('storage', {
+                key: \`youtube_auth_result_\${sessionId}\`,
+                newValue: JSON.stringify({ success: true, channelName: channelName })
+              }));
             }
+          } catch (e) {
+            console.log('📊 localStorage communication failed:', e.message);
+          }
 
-            // Method 5: Custom event (last resort)
-            try {
-              const event = new CustomEvent('youtubeAuthSuccess', {
-                detail: successData
-              });
-              window.dispatchEvent(event);
-              console.log('✅ Custom event dispatched');
-            } catch (e) {
-              console.log('📊 Custom event failed:', e.message);
-            }
-
-            // Close the popup after a delay or redirect
-            setTimeout(() => {
-              console.log('Attempting to close popup window');
-              try {
-                window.close();
-              } catch (e) {
-                console.log('📊 Cannot close window, redirecting...');
-                // Redirect directly to /app
-                window.location.href = 'https://clipandship.ca/app';
-              }
-            }, 1500);
-          }, 500);
+          // Immediately try to close popup or redirect to app
+          console.log('Attempting to close popup window');
+          try {
+            window.close();
+          } catch (e) {
+            console.log('📊 Cannot close window, redirecting immediately...');
+            // Redirect directly to /app
+            window.location.href = 'https://clipandship.ca/app';
+          }
         </script>
       </body>
     </html>
