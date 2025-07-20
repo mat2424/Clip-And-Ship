@@ -312,15 +312,19 @@ function createSuccessPage(channelName: string, sessionId?: string): Response {
               console.log('📊 Custom event failed:', e.message);
             }
 
-            // Close the popup after a delay
+            // Close the popup after a delay or redirect
             setTimeout(() => {
               console.log('Attempting to close popup window');
               try {
                 window.close();
               } catch (e) {
                 console.log('📊 Cannot close window, redirecting...');
-                // Redirect to app page
-                window.location.href = 'https://clipandship.ca/app';
+                // Redirect to OAuth callback page with success parameters
+                const redirectUrl = new URL('/oauth-callback', window.location.origin);
+                redirectUrl.searchParams.set('platform', 'youtube');
+                redirectUrl.searchParams.set('success', 'true');
+                redirectUrl.searchParams.set('channel', encodeURIComponent(channelName));
+                window.location.href = redirectUrl.toString();
               }
             }, 1500);
           }, 500);
