@@ -396,6 +396,12 @@ export const VideoIdeaItem = ({
               Review
             </Button>}
 
+          {/* Show Video button - always available when video exists */}
+          {videoUrl && <Button onClick={() => setShowVideo(!showVideo)} variant="outline" size="sm">
+              <PlayCircle className="w-4 h-4 mr-1" />
+              {showVideo ? "Hide Video" : "Show Video"}
+            </Button>}
+
         </div>
       </div>
       
