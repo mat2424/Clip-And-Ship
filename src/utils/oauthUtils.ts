@@ -41,10 +41,11 @@ export const initiateOAuth = async (platform: SocialPlatform) => {
 
     console.log(`✅ User authenticated: ${user.id}`);
 
-    // Handle YouTube with direct Google OAuth to edge function
+    // Handle YouTube with popup OAuth flow
     if (platform === 'youtube') {
-      console.log('🎬 Using direct YouTube OAuth flow');
-      return await initiateYouTubeOAuth();
+      console.log('🎬 Using YouTube popup OAuth flow');
+      const { openYouTubeAuthPopup } = await import('./youtubeAuth');
+      return await openYouTubeAuthPopup();
     }
 
     // Handle custom OAuth flows for TikTok and Instagram
@@ -219,47 +220,9 @@ const storePlatformConnection = async (platform: SocialPlatform, userId: string,
   }
 };
 
-// YouTube OAuth flow using edge function for proper authentication
+// YouTube OAuth flow using edge function for proper authentication (DEPRECATED - use openYouTubeAuthPopup instead)
 const initiateYouTubeOAuth = async () => {
-  try {
-    console.log('🎬 Starting YouTube OAuth flow via edge function');
-    
-    // Get the current user's session token
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      console.error('❌ Session error:', sessionError);
-      throw new Error('User not authenticated');
-    }
-    
-    console.log('✅ Session obtained, calling edge function...');
-    
-    // Call the YouTube OAuth setup edge function
-    const { data, error } = await supabase.functions.invoke('youtube-oauth-setup', {});
-    
-    if (error) {
-      console.error('❌ Edge function error:', error);
-      throw new Error(error.message || 'Failed to initiate YouTube OAuth');
-    }
-    
-    console.log('✅ YouTube OAuth response:', data);
-    
-    if (data?.auth_url) {
-      console.log('🚀 Redirecting to Google OAuth:', data.auth_url);
-      
-      // Store a flag to know we initiated YouTube OAuth
-      localStorage.setItem('youtube_oauth_initiated', 'true');
-      localStorage.setItem('youtube_oauth_timestamp', Date.now().toString());
-      
-      window.location.href = data.auth_url;
-      return { data: null, error: null };
-    } else {
-      throw new Error('No OAuth URL returned from edge function');
-    }
-  } catch (error) {
-    console.error('💥 Error initiating YouTube OAuth:', error);
-    throw error;
-  }
+  throw new Error('This function is deprecated. Use openYouTubeAuthPopup from youtubeAuth.ts instead');
 };
 
 // Generate random state for OAuth security
