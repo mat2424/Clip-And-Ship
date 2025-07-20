@@ -319,12 +319,8 @@ function createSuccessPage(channelName: string, sessionId?: string): Response {
                 window.close();
               } catch (e) {
                 console.log('📊 Cannot close window, redirecting...');
-                // Redirect to OAuth callback page with success parameters
-                const redirectUrl = new URL('/oauth-callback', window.location.origin);
-                redirectUrl.searchParams.set('platform', 'youtube');
-                redirectUrl.searchParams.set('success', 'true');
-                redirectUrl.searchParams.set('channel', encodeURIComponent(channelName));
-                window.location.href = redirectUrl.toString();
+                // Redirect directly to /app
+                window.location.href = 'https://clipandship.ca/app';
               }
             }, 1500);
           }, 500);

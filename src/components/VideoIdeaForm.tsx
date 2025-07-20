@@ -25,21 +25,11 @@ export const VideoIdeaForm = () => {
     handleSubmit
   } = useVideoIdeaForm();
 
-  const handleSecureInputChange = (value: string) => {
-    // Sanitize input before processing
-    const sanitizedValue = sanitizeUserInput(value);
-    
-    // Check for inappropriate content
-    if (containsInappropriateContent(sanitizedValue)) {
-      toast({
-        title: "Content Warning",
-        description: "Please ensure your content follows our community guidelines.",
-        variant: "destructive",
-      });
-      return;
+  const handleInputChange = (value: string) => {
+    // Simple length check only
+    if (value.length <= 5000) {
+      setIdeaText(value);
     }
-    
-    setIdeaText(sanitizedValue);
   };
 
   const handleSecureSubmit = async (e: React.FormEvent) => {
@@ -72,7 +62,7 @@ export const VideoIdeaForm = () => {
           id="idea_text"
           placeholder="Describe your video idea in detail... (10-5000 characters)"
           value={ideaText}
-          onChange={(e) => handleSecureInputChange(e.target.value)}
+          onChange={(e) => handleInputChange(e.target.value)}
           onKeyDown={(e) => {
             // Allow spacebar to work normally in the textarea
             if (e.key === ' ') {
