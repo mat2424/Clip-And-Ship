@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ExternalLink, Eye, Upload, Check, X, PlayCircle, Edit3, Plus, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ const AVAILABLE_PLATFORMS = [
   { name: 'X (Twitter)', tier: 'pro' },
   { name: 'LinkedIn', tier: 'pro' }
 ];
+
 interface VideoIdea {
   id: string;
   idea_text: string;
@@ -47,11 +49,13 @@ interface VideoIdea {
     [platform: string]: string;
   } | null;
 }
+
 interface VideoIdeaItemProps {
   idea: VideoIdea;
   onPreviewClick: (idea: VideoIdea) => void;
   onApprovalChange: () => void;
 }
+
 const getPlatformLinks = (idea: VideoIdea) => {
   const links = [];
   if (idea.youtube_link) links.push({
@@ -68,6 +72,7 @@ const getPlatformLinks = (idea: VideoIdea) => {
   });
   return links;
 };
+
 const getStatusDisplay = (idea: VideoIdea) => {
   if (idea.status === 'pending') return 'Generating...';
   if (idea.approval_status === 'ready_for_approval') return 'Completed';
@@ -76,12 +81,15 @@ const getStatusDisplay = (idea: VideoIdea) => {
   if (idea.approval_status === 'rejected') return 'Rejected';
   return 'Processing...';
 };
+
 const shouldShowPublishButton = (idea: VideoIdea) => {
   return idea.approval_status === 'ready_for_approval' && idea.video_url;
 };
+
 const shouldShowInlineApproval = (idea: VideoIdea) => {
   return idea.approval_status === 'ready_for_approval' && idea.video_url;
 };
+
 export const VideoIdeaItem = ({
   idea,
   onPreviewClick,
@@ -165,6 +173,7 @@ export const VideoIdeaItem = ({
       });
     }
   };
+
   const handleApprove = async () => {
     // Check if user has connected at least one social account
     if (connectedAccounts.length === 0) {
@@ -190,37 +199,6 @@ export const VideoIdeaItem = ({
         }
       });
 
-      // Get YouTube account info
-      const youtubeAccount = connectedAccounts.find(t => t.platform === 'youtube');
-      
-      // Send webhook to N8N
-      const webhookPayload = {
-        video_title: idea.idea_text,
-        caption: idea.caption || '',
-        video_file_url: idea.video_url,
-        youtube_account_info: youtubeAccount ? {
-          access_token: youtubeAccount.access_token,
-          refresh_token: youtubeAccount.refresh_token,
-          expires_at: youtubeAccount.expires_at,
-          username: youtubeAccount.username
-        } : null,
-        selected_platforms: selectedPlatforms
-      };
-
-      // Send to webhook
-      const webhookResponse = await fetch('https://clipandshipproduction.app.n8n.cloud/webhook/video-approved', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(webhookPayload)
-      });
-
-      if (!webhookResponse.ok) {
-        throw new Error(`Webhook failed: ${webhookResponse.status}`);
-      }
-
-      console.log('Webhook sent successfully');
       console.log('Sending approval with social accounts:', socialAccounts);
       
       const {
@@ -250,6 +228,7 @@ export const VideoIdeaItem = ({
       setIsSubmitting(false);
     }
   };
+
   const handleReject = async () => {
     setIsSubmitting(true);
     try {
@@ -282,6 +261,7 @@ export const VideoIdeaItem = ({
       setIsSubmitting(false);
     }
   };
+
   const handleTitleEdit = async () => {
     if (!isEditingTitle) {
       setIsEditingTitle(true);
@@ -311,10 +291,12 @@ export const VideoIdeaItem = ({
       });
     }
   };
+
   const handleTitleCancel = () => {
     setEditedTitle(idea.idea_text);
     setIsEditingTitle(false);
   };
+
   return <div className="p-6 md:p-8 bg-cool-turquoise overflow-hidden border-b border-cool-gray/20">
       {/* Plan Display and Status Header */}
       <div className="flex justify-between items-center mb-4">

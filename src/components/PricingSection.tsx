@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Crown, Star } from "lucide-react";
 
 const PRICING_TIERS = [
-  { credits: 5, price: 17.50, popular: false },
+  { credits: 5, price: 16, popular: false },
   { credits: 10, price: 30, popular: false },
   { credits: 25, price: 70, popular: true },
   { credits: 50, price: 120, popular: false },

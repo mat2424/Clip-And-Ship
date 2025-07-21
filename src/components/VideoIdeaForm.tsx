@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,10 +27,7 @@ export const VideoIdeaForm = () => {
   } = useVideoIdeaForm();
 
   const handleInputChange = (value: string) => {
-    // Simple length check only
-    if (value.length <= 5000) {
-      setIdeaText(value);
-    }
+    setIdeaText(value);
   };
 
   const handleSecureSubmit = async (e: React.FormEvent) => {
@@ -60,7 +58,7 @@ export const VideoIdeaForm = () => {
         <Label htmlFor="idea_text">Your Video Idea</Label>
         <Textarea
           id="idea_text"
-          placeholder="Describe your video idea in detail... (10-5000 characters)"
+          placeholder="Describe your video idea in detail..."
           value={ideaText}
           onChange={(e) => handleInputChange(e.target.value)}
           onKeyDown={(e) => {
@@ -70,12 +68,8 @@ export const VideoIdeaForm = () => {
             }
           }}
           className="min-h-[100px] resize-none"
-          maxLength={5000}
           required
         />
-        <div className="text-sm text-muted-foreground text-right">
-          {ideaText.length}/5000 characters
-        </div>
       </div>
 
       <PlatformSelector

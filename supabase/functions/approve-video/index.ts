@@ -132,6 +132,7 @@ serve(async (req) => {
         selected_platforms: allowedPlatforms,
         social_accounts: social_accounts || {},
         user_email: userEmail,
+        subscription_tier: profile.subscription_tier || 'free',
         video_data: {
           id: videoIdea.id,
           idea_text: videoIdea.idea_text,
