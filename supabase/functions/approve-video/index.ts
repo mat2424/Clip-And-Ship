@@ -96,6 +96,8 @@ serve(async (req) => {
         throw new Error('User profile not found');
       }
 
+      console.log('📊 User subscription tier retrieved:', profile.subscription_tier);
+
       // Filter platforms based on user tier
       let allowedPlatforms = selected_platforms || videoIdea.selected_platforms;
       const premiumPlatforms = ['Instagram', 'Facebook', 'Threads'];
@@ -149,13 +151,21 @@ serve(async (req) => {
         }
       };
 
-      console.log('Sending video approval data to webhook:', webhookData);
+      console.log('🚀 WEBHOOK PAYLOAD BEING SENT:');
+      console.log('📋 Video ID:', webhookData.video_idea_id);
+      console.log('🎯 Selected Platforms:', webhookData.selected_platforms);
+      console.log('👤 User Email:', webhookData.user_email);
+      console.log('💎 SUBSCRIPTION TIER:', webhookData.subscription_tier);
+      console.log('📹 Video URL:', webhookData.video_url);
+      console.log('🔗 Social Accounts Keys:', Object.keys(webhookData.social_accounts));
+      console.log('📊 Full Webhook Payload:', JSON.stringify(webhookData, null, 2));
 
       // Get the webhook URL from secrets (gracefully handle if missing)
       const webhookUrl = Deno.env.get('VIDEO_APPROVAL_WEBHOOK_URL');
       
       if (webhookUrl) {
-        console.log('🔗 Using webhook URL for processing');
+        console.log('🔗 Using webhook URL:', webhookUrl);
+        console.log('📤 About to send webhook request...');
 
         // Send to webhook
         try {
@@ -167,19 +177,29 @@ serve(async (req) => {
             body: JSON.stringify(webhookData)
           });
 
+          console.log('📥 Webhook response status:', webhookResponse.status);
+          console.log('📥 Webhook response headers:', Object.fromEntries(webhookResponse.headers.entries()));
+
           if (!webhookResponse.ok) {
-            console.error('Webhook failed:', await webhookResponse.text());
+            const errorText = await webhookResponse.text();
+            console.error('❌ Webhook failed with status:', webhookResponse.status);
+            console.error('❌ Webhook error response:', errorText);
             throw new Error('Failed to send video approval to webhook for processing');
           }
 
+          const responseText = await webhookResponse.text();
+          console.log('✅ Webhook response body:', responseText);
           console.log('✅ Video approval sent to webhook successfully');
         } catch (webhookError) {
-          console.error('Webhook error:', webhookError);
+          console.error('❌ Webhook error details:', webhookError);
+          console.error('❌ Webhook error message:', webhookError.message);
+          console.error('❌ Webhook error stack:', webhookError.stack);
           // Don't fail the entire operation if webhook fails
           console.log('⚠️ Webhook failed but continuing with approval process');
         }
       } else {
         console.log('⚠️ No webhook URL configured, skipping webhook call');
+        console.log('🔍 Available environment variables:', Object.keys(Deno.env.toObject()));
         // For now, we'll just mark as published since no webhook is configured
         await supabase
           .from('video_ideas')
