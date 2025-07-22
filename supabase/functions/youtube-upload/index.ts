@@ -104,7 +104,7 @@ serve(async (req) => {
       },
       status: {
         privacyStatus: privacy_status,
-        selfDeclaredMadeForKids: false, // Explicitly set to false for general audience
+        selfDeclaredMadeForKids: true, // Set to true for made for kids content
         embeddable: true,
         publicStatsViewable: true
       }

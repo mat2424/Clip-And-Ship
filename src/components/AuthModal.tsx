@@ -151,7 +151,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="mt-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-primary focus:ring-primary h-12 rounded-lg"
-                placeholder="mathew.kasbarian@gmail.com"
+                placeholder="example.email@gmail.com"
               />
             </div>
 
@@ -166,7 +166,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="mt-2 bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-primary focus:ring-primary h-12 rounded-lg"
-                placeholder="••••••••"
+                placeholder="*********"
               />
             </div>
 
