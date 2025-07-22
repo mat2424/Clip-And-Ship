@@ -55,7 +55,7 @@ export const VideoIdeaForm = () => {
   return (
     <form onSubmit={handleSecureSubmit} className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="idea_text">Your Video Idea</Label>
+        <Label htmlFor="idea_text">Your Video Idea (10 characters minimum)</Label>
         <Textarea
           id="idea_text"
           placeholder="Describe your video idea in detail..."
