@@ -2,10 +2,37 @@
 import { Play, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { openGlobalAuthModal } from "@/hooks/useAuthModal";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 
 export const HeroSection = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleWatchDemo = () => {
     window.open("https://youtu.be/Reg6D9ge3Dw", "_blank");
+  };
+
+  const handleStartCreating = () => {
+    if (user) {
+      navigate('/app');
+    } else {
+      openGlobalAuthModal();
+    }
   };
 
   return (
@@ -22,9 +49,9 @@ export const HeroSection = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               className="bg-cool-turquoise hover:bg-cool-turquoise-hover text-cool-charcoal px-8 py-4 text-lg font-medium rounded-lg transition-colors"
-              onClick={openGlobalAuthModal}
+              onClick={handleStartCreating}
             >
-              Start Creating Videos
+              {user ? "Go to Dashboard" : "Start Creating Videos"}
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
             <Button 
