@@ -307,6 +307,7 @@ export const VideoIdeaItem = ({
           </span>
         </div>
       </div>
+      
       {/* Inline Approval Buttons */}
       {shouldShowInlineApproval(idea) && <div className="mb-4 flex gap-2 items-center">
           <Button onClick={handleApprove} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white" size="sm">
@@ -378,12 +379,22 @@ export const VideoIdeaItem = ({
               Review
             </Button>}
 
-          {/* Show Video button - always available when video exists */}
-          {videoUrl && <Button onClick={() => setShowVideo(!showVideo)} variant="outline" size="sm">
+          {/* YouTube Link Button - prioritized over video file */}
+          {idea.youtube_link ? (
+            <Button 
+              onClick={() => window.open(idea.youtube_link, '_blank')} 
+              className="bg-red-600 hover:bg-red-700 text-white" 
+              size="sm"
+            >
+              <ExternalLink className="w-4 h-4 mr-1" />
+              Watch on YouTube
+            </Button>
+          ) : videoUrl && (
+            <Button onClick={() => setShowVideo(!showVideo)} variant="outline" size="sm">
               <PlayCircle className="w-4 h-4 mr-1" />
               {showVideo ? "Hide Video" : "Show Video"}
-            </Button>}
-
+            </Button>
+          )}
         </div>
       </div>
       
@@ -461,8 +472,8 @@ export const VideoIdeaItem = ({
           </p>
         </div>}
 
-      {/* Video file link */}
-      {idea.video_url && <div className="mb-4">
+      {/* Video file link - only show if no YouTube link exists */}
+      {idea.video_url && !idea.youtube_link && <div className="mb-4">
           <a href={idea.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm">
             <ExternalLink className="h-3 w-3" />
             View Video File

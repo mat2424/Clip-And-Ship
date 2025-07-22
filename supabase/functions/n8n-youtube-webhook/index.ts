@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -16,6 +17,7 @@ interface N8NWebhookPayload {
   is_short?: boolean;
   webhook_id?: string;
   metadata?: Record<string, any>;
+  video_idea_id?: string;
 }
 
 serve(async (req) => {
@@ -41,6 +43,7 @@ serve(async (req) => {
     const payload: N8NWebhookPayload = await req.json();
     
     console.log(`🎯 [${webhookId}] N8N webhook received for user: ${payload.user_id}`);
+    console.log(`📋 [${webhookId}] Video details: Title="${payload.title}", Description length=${payload.description?.length || 0}`);
 
     if (!payload.user_id || !payload.video_url || !payload.title) {
       throw new Error('Missing required fields: user_id, video_url, title');
@@ -89,7 +92,7 @@ serve(async (req) => {
       console.warn(`⚠️ [${webhookId}] Failed to log webhook:`, logError);
     }
 
-    // Call YouTube upload function
+    // Call YouTube upload function with comprehensive metadata
     const uploadResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/youtube-upload`, {
       method: 'POST',
       headers: {
@@ -101,9 +104,10 @@ serve(async (req) => {
         video_url: payload.video_url,
         title: payload.title,
         description: payload.description || '',
-        tags: payload.tags || ['shorts', 'automated'],
+        tags: payload.tags || ['shorts', 'ai-generated', 'automated'],
         privacy_status: payload.privacy_status || 'public',
         is_short: payload.is_short !== false, // Default to true
+        video_idea_id: payload.video_idea_id,
       }),
     });
 
@@ -145,7 +149,7 @@ serve(async (req) => {
       })
       .eq('webhook_id', webhookId);
 
-    // Return success response for n8n
+    // Return comprehensive success response for n8n
     return new Response(
       JSON.stringify({
         success: true,
@@ -153,7 +157,18 @@ serve(async (req) => {
         video_id: uploadResult.video_id,
         video_url: uploadResult.video_url,
         upload_status: uploadResult.upload_status,
-        message: 'Video uploaded successfully to YouTube'
+        processing_status: uploadResult.processing_status,
+        title: payload.title,
+        description: payload.description,
+        message: 'Video uploaded successfully to YouTube',
+        // Include data that n8n can use in subsequent nodes
+        youtube_data: {
+          video_id: uploadResult.video_id,
+          video_url: uploadResult.video_url,
+          title: payload.title,
+          description: payload.description,
+          upload_status: uploadResult.upload_status
+        }
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -15,6 +16,7 @@ interface YouTubeUploadRequest {
   privacy_status?: 'private' | 'public' | 'unlisted';
   category_id?: string;
   is_short?: boolean;
+  video_idea_id?: string;
 }
 
 interface YouTubeUploadResult {
@@ -40,10 +42,12 @@ serve(async (req) => {
       tags = ['shorts', 'ai'],
       privacy_status = 'public',
       category_id = '22', // People & Blogs
-      is_short = true
+      is_short = true,
+      video_idea_id
     }: YouTubeUploadRequest = await req.json();
 
     console.log(`🎬 [${uploadId}] YouTube upload started for user: ${user_id}`);
+    console.log(`📋 [${uploadId}] Video details - Title: "${title}", Description length: ${description.length}`);
 
     if (!user_id || !video_url || !title) {
       throw new Error('Missing required fields: user_id, video_url, title');
@@ -85,27 +89,28 @@ serve(async (req) => {
     const videoSize = videoBlob.size;
     console.log(`📦 [${uploadId}] Video downloaded, size: ${(videoSize / 1024 / 1024).toFixed(2)}MB`);
 
-    // Prepare video metadata
+    // Prepare comprehensive video metadata with proper settings
+    const cleanTitle = title.length > 100 ? title.substring(0, 97) + '...' : title;
+    const finalTitle = is_short && !cleanTitle.includes('#Shorts') ? `${cleanTitle} #Shorts` : cleanTitle;
+    
     const metadata = {
       snippet: {
-        title: title.length > 100 ? title.substring(0, 97) + '...' : title,
-        description: description,
-        tags: tags,
+        title: finalTitle,
+        description: description || 'AI-generated video content',
+        tags: [...tags, 'shorts', 'ai-generated', 'automated'],
         categoryId: category_id,
-        defaultLanguage: 'en'
+        defaultLanguage: 'en',
+        defaultAudioLanguage: 'en'
       },
       status: {
         privacyStatus: privacy_status,
-        selfDeclaredMadeForKids: false
+        selfDeclaredMadeForKids: false, // Explicitly set to false for general audience
+        embeddable: true,
+        publicStatsViewable: true
       }
     };
 
-    // Add YouTube Shorts indicator if applicable
-    if (is_short) {
-      metadata.snippet.title = `${metadata.snippet.title} #Shorts`;
-    }
-
-    console.log(`🚀 [${uploadId}] Initiating YouTube upload`);
+    console.log(`🚀 [${uploadId}] Initiating YouTube upload with metadata:`, JSON.stringify(metadata, null, 2));
 
     // Initialize resumable upload
     const initResponse = await fetch(
@@ -160,6 +165,7 @@ serve(async (req) => {
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     
     console.log(`✅ [${uploadId}] Upload successful! Video ID: ${videoId}`);
+    console.log(`🔗 [${uploadId}] YouTube URL: ${youtubeUrl}`);
 
     // Store upload record
     const { error: dbError } = await supabaseClient
@@ -168,7 +174,7 @@ serve(async (req) => {
         user_id: user_id,
         video_id: videoId,
         video_url: youtubeUrl,
-        title: title,
+        title: finalTitle,
         description: description,
         privacy_status: privacy_status,
         upload_status: 'completed',
@@ -178,6 +184,38 @@ serve(async (req) => {
 
     if (dbError) {
       console.warn(`⚠️ [${uploadId}] Failed to store upload record:`, dbError);
+    }
+
+    // If we have a video_idea_id, call the completion webhook
+    if (video_idea_id) {
+      try {
+        console.log(`📞 [${uploadId}] Calling upload completion webhook for video_idea: ${video_idea_id}`);
+        
+        const completionResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/video-upload-complete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          },
+          body: JSON.stringify({
+            video_idea_id: video_idea_id,
+            youtube_video_id: videoId,
+            youtube_video_url: youtubeUrl,
+            title: finalTitle,
+            description: description,
+            status: 'success'
+          }),
+        });
+
+        if (completionResponse.ok) {
+          console.log(`✅ [${uploadId}] Completion webhook called successfully`);
+        } else {
+          const error = await completionResponse.text();
+          console.warn(`⚠️ [${uploadId}] Completion webhook failed:`, error);
+        }
+      } catch (error) {
+        console.warn(`⚠️ [${uploadId}] Error calling completion webhook:`, error);
+      }
     }
 
     const uploadResult: YouTubeUploadResult = {
