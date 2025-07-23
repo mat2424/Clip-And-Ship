@@ -100,7 +100,7 @@ serve(async (req) => {
         .eq('id', token_id)
         .eq('user_id', user.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (updateError) {
         console.error(`❌ [${requestId}] Database update failed:`, updateError);

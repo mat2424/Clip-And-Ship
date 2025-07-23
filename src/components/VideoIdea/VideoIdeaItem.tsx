@@ -320,10 +320,6 @@ export const VideoIdeaItem = ({
             Reject
           </Button>
 
-          {videoUrl && <Button onClick={() => setShowVideo(!showVideo)} variant="outline" size="sm" className="ml-2">
-              <PlayCircle className="w-4 h-4 mr-1" />
-              {showVideo ? "Hide Video" : "Show Video"}
-            </Button>}
         </div>}
 
       {/* Rejection Reason Input */}
