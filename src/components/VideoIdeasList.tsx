@@ -34,6 +34,7 @@ export const VideoIdeasList = () => {
   } = useVideoIdeas();
   const [selectedVideoForPreview, setSelectedVideoForPreview] = useState<VideoIdea | null>(null);
   const [selectedVideoForPublish, setSelectedVideoForPublish] = useState<VideoIdea | null>(null);
+  const [isEntireSectionCollapsed, setIsEntireSectionCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     'ready_for_approval': true,
     'approved': true,
@@ -74,33 +75,36 @@ export const VideoIdeasList = () => {
   const categorizedVideos = categorizeVideos();
   return <>
       <div className="bg-cool-charcoal rounded-lg shadow overflow-hidden">
-        <div className="p-4 md:p-6 border-b bg-cool-turquoise bg-gray-50">
+        <div className="p-4 md:p-6 border-b bg-cool-turquoise bg-gray-50 cursor-pointer" onClick={() => setIsEntireSectionCollapsed(!isEntireSectionCollapsed)}>
           <div className="flex justify-between items-center">
             <h2 className="text-lg md:text-xl font-semibold text-cool-charcoal">Your Videos</h2>
+            {isEntireSectionCollapsed ? <ChevronRight className="w-5 h-5 text-cool-charcoal" /> : <ChevronDown className="w-5 h-5 text-cool-charcoal" />}
           </div>
         </div>
-        <div className="space-y-2 overflow-hidden">
-          {videoIdeas.length === 0 ? <div className="p-4 md:p-6 text-center text-gray-500">
-              No videos yet. Create your first video above!
-            </div> : Object.entries(categorizedVideos).map(([section, videos]) => {
-          if (videos.length === 0) return null;
-          return <Collapsible key={section} open={expandedSections[section]} onOpenChange={() => toggleSection(section)}>
-                  <CollapsibleTrigger asChild>
-                    <div className={`p-3 border rounded-lg cursor-pointer hover:bg-opacity-80 transition-colors ${getSectionColor(section)}`}>
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold text-white">
-                          {getSectionTitle(section, videos.length)}
-                        </h3>
-                        {expandedSections[section] ? <ChevronDown className="w-5 h-5 text-white" /> : <ChevronRight className="w-5 h-5 text-white" />}
+        {!isEntireSectionCollapsed && (
+          <div className="space-y-2 overflow-hidden">
+            {videoIdeas.length === 0 ? <div className="p-4 md:p-6 text-center text-gray-500">
+                No videos yet. Create your first video above!
+              </div> : Object.entries(categorizedVideos).map(([section, videos]) => {
+            if (videos.length === 0) return null;
+            return <Collapsible key={section} open={expandedSections[section]} onOpenChange={() => toggleSection(section)}>
+                    <CollapsibleTrigger asChild>
+                      <div className={`p-3 border rounded-lg cursor-pointer hover:bg-opacity-80 transition-colors ${getSectionColor(section)}`}>
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-semibold text-white">
+                            {getSectionTitle(section, videos.length)}
+                          </h3>
+                          {expandedSections[section] ? <ChevronDown className="w-5 h-5 text-white" /> : <ChevronRight className="w-5 h-5 text-white" />}
+                        </div>
                       </div>
-                    </div>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-1">
-                    {videos.map(idea => <VideoIdeaItem key={idea.id} idea={idea} onPreviewClick={setSelectedVideoForPreview} onApprovalChange={refetchVideoIdeas} />)}
-                  </CollapsibleContent>
-                </Collapsible>;
-        })}
-        </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-1">
+                      {videos.map(idea => <VideoIdeaItem key={idea.id} idea={idea} onPreviewClick={setSelectedVideoForPreview} onApprovalChange={refetchVideoIdeas} />)}
+                    </CollapsibleContent>
+                  </Collapsible>;
+          })}
+          </div>
+        )}
       </div>
 
       {/* Video Preview Modal */}
