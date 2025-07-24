@@ -139,6 +139,20 @@ export const SocialConnections = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Find the account to disconnect
+      const accountToDisconnect = connectedAccounts.find(acc => acc.platform === platform);
+      if (!accountToDisconnect) {
+        toast({
+          title: "Error",
+          description: "Account not found.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Immediate UI feedback - remove from list
+      const updatedAccounts = connectedAccounts.filter(acc => acc.platform !== platform);
+      
       // For YouTube, delete from youtube_tokens table
       if (platform === 'youtube') {
         const { error } = await supabase
@@ -152,8 +166,7 @@ export const SocialConnections = () => {
         const { error } = await supabase
           .from('social_tokens')
           .delete()
-          .eq('user_id', user.id)
-          .eq('platform', platform);
+          .eq('id', accountToDisconnect.id);
 
         if (error) throw error;
       }
@@ -163,7 +176,7 @@ export const SocialConnections = () => {
         description: `Successfully disconnected from ${PLATFORM_CONFIG.find(p => p.platform === platform)?.name}.`,
       });
 
-      // Refresh accounts to update the UI
+      // Force refresh to ensure data consistency
       refreshAccounts(true);
 
     } catch (error: any) {
@@ -173,6 +186,8 @@ export const SocialConnections = () => {
         description: error.message || "Failed to disconnect from the platform. Please try again.",
         variant: "destructive",
       });
+      // Force refresh in case of error to restore accurate state
+      refreshAccounts(true);
     }
   };
 
@@ -202,14 +217,14 @@ export const SocialConnections = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4 mb-6">
-          <Alert>
+          <Alert className="border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               <strong>Important:</strong> User must be logged in and have a valid YouTube account linked before proceeding.
             </AlertDescription>
           </Alert>
           
-          <Alert>
+          <Alert className="border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
             <Info className="h-4 w-4" />
             <AlertDescription>
               <strong>Security Notice:</strong> When connecting accounts, your browser may show an "unsafe app" warning. This is normal for apps in development. Click "Advanced" and proceed to continue the authentication process.

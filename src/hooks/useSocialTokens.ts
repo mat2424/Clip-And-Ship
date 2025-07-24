@@ -101,15 +101,17 @@ export const useSocialTokens = () => {
                 return null;
               }
 
-              // For YouTube, validate token with API less frequently
-              if (account.platform === 'youtube' && forceRefresh) {
-                const isValid = await validateYouTubeToken(account.access_token);
-                if (!isValid) {
-                  console.log('🔄 YouTube token invalid, attempting refresh...');
-                  const refreshed = await refreshYouTubeToken(account);
-                  return refreshed;
-                }
-              }
+          // For YouTube, validate token with API only on explicit force refresh
+          if (account.platform === 'youtube' && forceRefresh) {
+            // Add a small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 100));
+            const isValid = await validateYouTubeToken(account.access_token);
+            if (!isValid) {
+              console.log('🔄 YouTube token invalid, attempting refresh...');
+              const refreshed = await refreshYouTubeToken(account);
+              return refreshed;
+            }
+          }
 
               return account;
             })
@@ -197,27 +199,52 @@ export const useSocialTokens = () => {
 
   const disconnectAccount = async (tokenId: string) => {
     try {
-      const { error } = await supabase
-        .from('social_tokens')
-        .delete()
-        .eq('id', tokenId);
-
-      if (error) {
-        console.error('Error disconnecting account:', error);
+      // Find the account to identify platform
+      const account = connectedAccounts.find(acc => acc.id === tokenId);
+      if (!account) {
         toast({
           title: "Error",
-          description: "Failed to disconnect account.",
+          description: "Account not found.",
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Success",
-          description: "Account disconnected successfully.",
-        });
-        fetchConnectedAccounts();
+        return;
       }
+
+      // Update local state immediately for better UX
+      setConnectedAccounts(prev => prev.filter(acc => acc.id !== tokenId));
+
+      // Handle YouTube tokens separately
+      if (account.platform === 'youtube') {
+        const { error } = await supabase
+          .from('youtube_tokens')
+          .delete()
+          .eq('id', tokenId);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('social_tokens')
+          .delete()
+          .eq('id', tokenId);
+
+        if (error) throw error;
+      }
+
+      // Clear cache to force fresh data on next fetch
+      cachedAccounts = [];
+      lastFetchTime = 0;
+
+      toast({
+        title: "Success",
+        description: "Account disconnected successfully.",
+      });
+      
+      // Force refresh to ensure consistency
+      fetchConnectedAccounts(true);
     } catch (error) {
       console.error('Error disconnecting account:', error);
+      // Restore state on error
+      fetchConnectedAccounts(true);
       toast({
         title: "Error",
         description: "Failed to disconnect account.",
