@@ -6,6 +6,8 @@ import { useSocialTokens } from "@/hooks/useSocialTokens";
 import { initiateOAuth } from "@/utils/oauthUtils";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, Info } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
 type SocialPlatform = Database["public"]["Enums"]["social_platform"];
@@ -199,6 +201,21 @@ export const SocialConnections = () => {
         </p>
       </CardHeader>
       <CardContent>
+        <div className="space-y-4 mb-6">
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Important:</strong> User must be logged in and have a valid YouTube account linked before proceeding.
+            </AlertDescription>
+          </Alert>
+          
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Security Notice:</strong> When connecting accounts, your browser may show an "unsafe app" warning. This is normal for apps in development. Click "Advanced" and proceed to continue the authentication process.
+            </AlertDescription>
+          </Alert>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {PLATFORM_CONFIG.map((platform) => {
             const hasAccess = canAccessPlatform(platform.tier);
