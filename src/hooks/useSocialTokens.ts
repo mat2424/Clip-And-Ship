@@ -213,21 +213,31 @@ export const useSocialTokens = () => {
       // Update local state immediately for better UX
       setConnectedAccounts(prev => prev.filter(acc => acc.id !== tokenId));
 
-      // Handle YouTube tokens separately
+      // Handle YouTube tokens separately - they're stored in youtube_tokens table
       if (account.platform === 'youtube') {
-        const { error } = await supabase
+        // First try to delete from youtube_tokens table
+        const { error: youtubeError } = await supabase
           .from('youtube_tokens')
           .delete()
-          .eq('id', tokenId);
+          .eq('id', tokenId)
+          .eq('user_id', account.user_id);
 
-        if (error) throw error;
+        if (youtubeError) {
+          console.error('Error deleting from youtube_tokens:', youtubeError);
+          throw youtubeError;
+        }
       } else {
+        // For other platforms, delete from social_tokens table
         const { error } = await supabase
           .from('social_tokens')
           .delete()
-          .eq('id', tokenId);
+          .eq('id', tokenId)
+          .eq('user_id', account.user_id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error deleting from social_tokens:', error);
+          throw error;
+        }
       }
 
       // Clear cache to force fresh data on next fetch
