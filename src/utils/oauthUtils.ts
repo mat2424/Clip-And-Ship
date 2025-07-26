@@ -103,7 +103,7 @@ const initiateCustomOAuth = async (platform: 'tiktok' | 'instagram') => {
   try {
     console.log(`🔧 Setting up custom OAuth for ${platform}`);
     
-    // For now, show a message that these platforms require API keys
+    // These platforms require proper API keys and OAuth setup
     if (platform === 'tiktok') {
       throw new Error('TikTok integration requires API keys. Please contact support to set up TikTok publishing.');
     }
@@ -163,21 +163,10 @@ export const handleCustomOAuthCallback = async () => {
     
     console.log(`✅ Identified platform: ${platform}`);
     
-    // For now, we'll create a mock token since server-side exchange isn't implemented yet
-    const mockTokenData = {
-      access_token: `mock_${platform}_token_${Date.now()}`,
-      token_type: 'bearer',
-      expires_in: 3600
-    };
+    // This should not happen in production - OAuth callback without proper implementation
+    throw new Error(`OAuth callback for ${platform} is not properly implemented. Please contact support.`);
     
-    // Store the connection in our database
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      console.log(`💾 Storing ${platform} connection for user:`, user.id);
-      await storePlatformConnection(platform, user.id, mockTokenData);
-    }
-    
-    return { platform, tokenData: mockTokenData };
+    return { platform, tokenData: null };
   } catch (error) {
     console.error('💥 Error handling OAuth callback:', error);
     throw error;
