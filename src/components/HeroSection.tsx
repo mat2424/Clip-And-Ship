@@ -1,5 +1,5 @@
 
-import { Play, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { openGlobalAuthModal } from "@/hooks/useAuthModal";
 import { useNavigate } from "react-router-dom";
@@ -23,11 +23,7 @@ export const HeroSection = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleWatchDemo = () => {
-    window.open("https://youtu.be/Reg6D9ge3Dw", "_blank");
-  };
-
-  const handleStartCreating = () => {
+  const handleGetStarted = () => {
     if (user) {
       navigate('/app');
     } else {
@@ -36,34 +32,42 @@ export const HeroSection = () => {
   };
 
   return (
-    <section className="relative py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto text-center">
-        <div className="mb-8">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-cool-turquoise to-cool-aqua bg-clip-text text-transparent">
-            Create & Publish Videos with AI
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto mb-8">
-            Transform your ideas into engaging videos and automatically publish them across all your social media platforms. 
-            No video editing skills required.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              className="bg-cool-turquoise hover:bg-cool-turquoise-hover text-cool-charcoal px-8 py-4 text-lg font-medium rounded-lg transition-colors"
-              onClick={handleStartCreating}
-            >
-              {user ? "Go to Dashboard" : "Start Creating Videos"}
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            <Button 
-              variant="outline" 
-              className="border-cool-turquoise text-cool-turquoise hover:bg-cool-turquoise/10 px-8 py-4 text-lg font-medium rounded-lg"
-              onClick={handleWatchDemo}
-            >
-              <Play className="w-5 h-5 mr-2" />
-              Watch Demo
-            </Button>
+    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-cool-charcoal via-cool-navy to-cool-charcoal min-h-screen flex items-center">
+      <div className="max-w-6xl mx-auto text-center">
+        <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 leading-tight">
+          Create & Publish Videos with{" "}
+          <span className="bg-gradient-to-r from-cool-turquoise to-cool-aqua bg-clip-text text-transparent">
+            AI
+          </span>
+        </h1>
+        <p className="text-gray-300 text-xl md:text-2xl mb-12 max-w-4xl mx-auto leading-relaxed">
+          Transform your ideas into engaging videos and automatically publish them across all your social media platforms. No video editing skills required.
+        </p>
+        
+        {/* YouTube Video */}
+        <div className="relative w-full max-w-4xl mx-auto mb-12">
+          <div className="aspect-video rounded-lg overflow-hidden shadow-2xl border border-cool-turquoise/30">
+            <iframe
+              width="100%"
+              height="100%"
+              src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+              title="Clip & Ship AI Demo"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              className="w-full h-full"
+            />
           </div>
         </div>
+
+        {/* Single centered button */}
+        <Button 
+          className="bg-cool-turquoise hover:bg-cool-turquoise-hover text-cool-charcoal px-8 py-4 text-lg font-medium rounded-lg transition-colors"
+          onClick={handleGetStarted}
+        >
+          {user ? "Go to Dashboard" : "Start Creating Videos"}
+          <ArrowRight className="w-5 h-5 ml-2" />
+        </Button>
       </div>
     </section>
   );

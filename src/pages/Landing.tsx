@@ -8,7 +8,6 @@ import { HeroSection } from "@/components/HeroSection";
 import { FeaturesSection } from "@/components/FeaturesSection";
 import { BenefitsSection } from "@/components/BenefitsSection";
 import { CallToActionSection } from "@/components/CallToActionSection";
-import { YouTubeVideoSection } from "@/components/YouTubeVideoSection";
 import { LandingFooter } from "@/components/LandingFooter";
 
 const Landing = () => {
@@ -55,7 +54,6 @@ const Landing = () => {
       <HeroSection />
       <FeaturesSection />
       <BenefitsSection />
-      <YouTubeVideoSection />
       <CallToActionSection />
       <LandingFooter />
     </div>
