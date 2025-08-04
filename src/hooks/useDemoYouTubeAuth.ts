@@ -55,7 +55,10 @@ export const useDemoYouTubeAuth = () => {
       console.log('🚀 Initiating demo YouTube OAuth...');
 
       const { data, error } = await supabase.functions.invoke('youtube-oauth-setup', {
-        body: { demo_mode: true }
+        body: { demo_mode: true },
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
 
       if (error) {

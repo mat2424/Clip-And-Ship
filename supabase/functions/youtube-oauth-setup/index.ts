@@ -27,27 +27,38 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     )
 
-    // Get user from JWT with enhanced validation
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error(`❌ [${requestId}] Missing or invalid authorization header`)
-      throw new Error('Invalid authorization header')
+    // Check if this is a demo request
+    const { demo_mode } = await req.json().catch(() => ({}));
+    let userId = '';
+    
+    if (demo_mode) {
+      // For demo mode, use a fixed demo user ID
+      userId = 'demo-user';
+      console.log(`🎬 [${requestId}] Demo mode - using demo user ID`);
+    } else {
+      // Get user from JWT for normal mode
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        console.error(`❌ [${requestId}] Missing or invalid authorization header`)
+        throw new Error('Invalid authorization header')
+      }
+
+      const token = authHeader.replace('Bearer ', '')
+      if (!token || token.length < 10) {
+        console.error(`❌ [${requestId}] Invalid JWT token`)
+        throw new Error('Invalid JWT token')
+      }
+
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
+
+      if (userError || !user) {
+        console.error(`❌ [${requestId}] User authentication failed:`, userError)
+        throw new Error('Unauthorized: ' + (userError?.message || 'Invalid user'))
+      }
+
+      userId = user.id;
+      console.log(`👤 [${requestId}] Authenticated user: ${user.id}`)
     }
-
-    const token = authHeader.replace('Bearer ', '')
-    if (!token || token.length < 10) {
-      console.error(`❌ [${requestId}] Invalid JWT token`)
-      throw new Error('Invalid JWT token')
-    }
-
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
-
-    if (userError || !user) {
-      console.error(`❌ [${requestId}] User authentication failed:`, userError)
-      throw new Error('Unauthorized: ' + (userError?.message || 'Invalid user'))
-    }
-
-    console.log(`👤 [${requestId}] Authenticated user: ${user.id}`)
 
     // Enhanced environment variable validation
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID')
@@ -65,13 +76,14 @@ serve(async (req) => {
 
     // Generate cryptographically secure state parameter
     const stateData = {
-      user_id: user.id,
+      user_id: userId,
       timestamp: Date.now(), // Store as milliseconds
-      nonce: crypto.randomUUID()
+      nonce: crypto.randomUUID(),
+      demo_mode: demo_mode || false
     }
     
     const state = btoa(JSON.stringify(stateData))
-    console.log(`🔐 [${requestId}] Generated secure state for user ${user.id}`)
+    console.log(`🔐 [${requestId}] Generated secure state for user ${userId}`)
 
     // Minimal YouTube OAuth scopes for faster authorization
     const scopes = [

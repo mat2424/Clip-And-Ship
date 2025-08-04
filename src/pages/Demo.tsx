@@ -42,8 +42,6 @@ const DEMO_VIDEOS: DemoVideo[] = [
 export default function Demo() {
   const [selectedVideo, setSelectedVideo] = useState<DemoVideo | null>(null);
   const [editedCaption, setEditedCaption] = useState("");
-  const [useAiVoice, setUseAiVoice] = useState(true);
-  const [voiceFile, setVoiceFile] = useState<File | null>(null);
   
   const { toast } = useToast();
   const { isConnected, connect, loading: authLoading } = useDemoYouTubeAuth();
@@ -54,16 +52,6 @@ export default function Demo() {
     setEditedCaption(video.caption);
   };
 
-  const handleVoiceChange = (field: string, value: any) => {
-    if (field === 'use_ai_voice') {
-      setUseAiVoice(value);
-      if (value) {
-        setVoiceFile(null);
-      }
-    } else if (field === 'voice_file') {
-      setVoiceFile(value);
-    }
-  };
 
   const handleSubmit = async () => {
     if (!selectedVideo) {
@@ -89,8 +77,6 @@ export default function Demo() {
         title: selectedVideo.title,
         caption: editedCaption,
         videoUrl: selectedVideo.videoUrl,
-        useAiVoice,
-        voiceFile,
       });
 
       toast({
@@ -217,12 +203,6 @@ export default function Demo() {
                   </CardContent>
                 </Card>
 
-                <VoiceSettings
-                  useAiVoice={useAiVoice}
-                  voiceFileUrl={voiceFile ? URL.createObjectURL(voiceFile) : ""}
-                  onVoiceChange={handleVoiceChange}
-                  isDemoMode={true}
-                />
 
                 <Button
                   onClick={handleSubmit}

@@ -124,9 +124,16 @@ serve(async (req) => {
     }
 
     const tokenData = await tokenResponse.json();
+    console.log(`🔍 [${requestId}] Token response keys:`, Object.keys(tokenData));
     
-    if (!tokenData.access_token || !tokenData.refresh_token) {
-      throw new Error('Incomplete token response from Google');
+    if (!tokenData.access_token) {
+      console.error(`❌ [${requestId}] Missing access_token in response:`, tokenData);
+      throw new Error('Missing access token from Google');
+    }
+    
+    if (!tokenData.refresh_token) {
+      console.error(`❌ [${requestId}] Missing refresh_token in response:`, tokenData);
+      throw new Error('Missing refresh token from Google');
     }
 
     console.log(`✅ [${requestId}] Tokens received successfully`);
@@ -159,24 +166,28 @@ serve(async (req) => {
     // Calculate token expiration
     const expiresAt = new Date(Date.now() + (tokenData.expires_in * 1000)).toISOString();
 
-    // Store tokens in database
-    const { error: dbError } = await supabaseClient
-      .from('youtube_tokens')
-      .upsert({
-        user_id: userId,
-        access_token: tokenData.access_token,
-        refresh_token: tokenData.refresh_token,
-        expires_at: expiresAt,
-        channel_name: channelName,
-        token_type: tokenData.token_type || 'Bearer',
-        scope: tokenData.scope || 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly'
-      }, {
-        onConflict: 'user_id'
-      });
+    // Store tokens in database (skip for demo users)
+    if (userId !== 'demo-user') {
+      const { error: dbError } = await supabaseClient
+        .from('youtube_tokens')
+        .upsert({
+          user_id: userId,
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token,
+          expires_at: expiresAt,
+          channel_name: channelName,
+          token_type: tokenData.token_type || 'Bearer',
+          scope: tokenData.scope || 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly'
+        }, {
+          onConflict: 'user_id'
+        });
 
-    if (dbError) {
-      console.error(`❌ [${requestId}] Database error:`, dbError);
-      throw new Error(`Failed to save tokens: ${dbError.message}`);
+      if (dbError) {
+        console.error(`❌ [${requestId}] Database error:`, dbError);
+        throw new Error(`Failed to save tokens: ${dbError.message}`);
+      }
+    } else {
+      console.log(`🎬 [${requestId}] Demo mode - skipping database storage`);
     }
 
     console.log(`✅ [${requestId}] YouTube connection saved for user ${userId}`);
