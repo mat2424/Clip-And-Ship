@@ -13,9 +13,10 @@ interface VoiceSettingsProps {
   useAiVoice: boolean;
   voiceFileUrl: string;
   onVoiceChange: (field: string, value: any) => void;
+  isDemoMode?: boolean;
 }
 
-export const VoiceSettings = ({ useAiVoice, voiceFileUrl, onVoiceChange }: VoiceSettingsProps) => {
+export const VoiceSettings = ({ useAiVoice, voiceFileUrl, onVoiceChange, isDemoMode = false }: VoiceSettingsProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [userTier, setUserTier] = useState<string>('free');
@@ -47,8 +48,8 @@ export const VoiceSettings = ({ useAiVoice, voiceFileUrl, onVoiceChange }: Voice
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check if user has premium access
-    if (userTier === 'free') {
+    // Check if user has premium access (skip check in demo mode)
+    if (!isDemoMode && userTier === 'free') {
       toast({
         title: "Premium Feature Required",
         description: "Custom voice files are only available for Premium and Pro subscribers. Please upgrade your account.",
@@ -92,31 +93,40 @@ export const VoiceSettings = ({ useAiVoice, voiceFileUrl, onVoiceChange }: Voice
     }
 
     try {
-      // Generate a secure filename
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(2, 8);
-      const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
-      const secureFileName = `voice_${timestamp}_${randomString}${fileExtension}`;
-
-      const { data, error } = await supabase.storage
-        .from('voice-files')
-        .upload(secureFileName, file, {
-          cacheControl: '3600',
-          upsert: false
+      if (isDemoMode) {
+        // In demo mode, just store the file locally without uploading
+        onVoiceChange('voice_file', file);
+        toast({
+          title: "Success",
+          description: "Voice file selected for demo!",
         });
+      } else {
+        // Generate a secure filename
+        const timestamp = Date.now();
+        const randomString = Math.random().toString(36).substring(2, 8);
+        const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+        const secureFileName = `voice_${timestamp}_${randomString}${fileExtension}`;
 
-      if (error) throw error;
+        const { data, error } = await supabase.storage
+          .from('voice-files')
+          .upload(secureFileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('voice-files')
-        .getPublicUrl(data.path);
+        if (error) throw error;
 
-      onVoiceChange('voice_file_url', publicUrl);
-      
-      toast({
-        title: "Success",
-        description: "Voice file uploaded successfully!",
-      });
+        const { data: { publicUrl } } = supabase.storage
+          .from('voice-files')
+          .getPublicUrl(data.path);
+
+        onVoiceChange('voice_file_url', publicUrl);
+        
+        toast({
+          title: "Success",
+          description: "Voice file uploaded successfully!",
+        });
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast({
@@ -135,7 +145,7 @@ export const VoiceSettings = ({ useAiVoice, voiceFileUrl, onVoiceChange }: Voice
   };
 
   const handleVoiceToggle = (checked: boolean) => {
-    if (!checked && userTier === 'free') {
+    if (!checked && !isDemoMode && userTier === 'free') {
       toast({
         title: "Premium Feature Required",
         description: "Custom voice files are only available for Premium and Pro subscribers. Please upgrade your account.",
@@ -154,12 +164,15 @@ export const VoiceSettings = ({ useAiVoice, voiceFileUrl, onVoiceChange }: Voice
             <Label className="text-base font-medium flex items-center gap-2">
               <Mic className="h-4 w-4" />
               Voice Settings
-              {userTier === 'free' && <Crown className="h-4 w-4 text-yellow-500" />}
+              {!isDemoMode && userTier === 'free' && <Crown className="h-4 w-4 text-yellow-500" />}
             </Label>
             <p className="text-sm text-muted-foreground">
               Choose between AI voice or upload your own
-              {userTier === 'free' && (
+              {!isDemoMode && userTier === 'free' && (
                 <span className="text-yellow-600 font-medium"> (Premium Feature)</span>
+              )}
+              {isDemoMode && (
+                <span className="text-blue-600 font-medium"> (Demo: No restrictions)</span>
               )}
             </p>
           </div>
@@ -171,7 +184,7 @@ export const VoiceSettings = ({ useAiVoice, voiceFileUrl, onVoiceChange }: Voice
 
         {!useAiVoice && (
           <div className="space-y-3">
-            {userTier === 'free' ? (
+            {!isDemoMode && userTier === 'free' ? (
               <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Crown className="h-5 w-5 text-yellow-500" />
