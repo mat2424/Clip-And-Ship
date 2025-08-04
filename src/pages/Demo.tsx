@@ -107,25 +107,25 @@ export default function Demo() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-background">
       <DemoHeader />
       
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {!selectedVideo ? (
           <>
             <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
+              <h1 className="text-4xl font-bold text-foreground mb-4">
                 Try Clip & Ship AI Demo
               </h1>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Experience our AI video generation without creating an account. 
                 Choose from our pre-made videos and publish directly to YouTube.
               </p>
             </div>
 
-            <Alert className="mb-8 border-blue-200 bg-blue-50">
-              <AlertCircle className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800">
+            <Alert className="mb-8 border-border bg-card">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-card-foreground">
                 Demo mode allows free uploads without credits. Some features are limited compared to the full version.
               </AlertDescription>
             </Alert>
@@ -151,7 +151,7 @@ export default function Demo() {
                 <ArrowLeft className="h-4 w-4" />
                 Back to Videos
               </Button>
-              <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
+              <Badge variant="outline" className="bg-card text-card-foreground border-border">
                 DEMO MODE
               </Badge>
             </div>
@@ -163,10 +163,10 @@ export default function Demo() {
                     <h2 className="text-xl font-semibold mb-4">Selected Video</h2>
                     <div className="space-y-4">
                       <div>
-                        <h3 className="font-medium text-gray-900">{selectedVideo.title}</h3>
+                        <h3 className="font-medium text-card-foreground">{selectedVideo.title}</h3>
                       </div>
                       
-                      <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                      <div className="aspect-video bg-muted rounded-lg overflow-hidden">
                         <video
                           src={selectedVideo.videoUrl}
                           controls
@@ -181,7 +181,7 @@ export default function Demo() {
                         <textarea
                           value={editedCaption}
                           onChange={(e) => setEditedCaption(e.target.value)}
-                          className="w-full p-3 border border-gray-300 rounded-lg resize-none"
+                          className="w-full p-3 border border-input bg-background text-foreground rounded-lg resize-none"
                           rows={4}
                           placeholder="Edit your video caption..."
                         />
@@ -196,13 +196,13 @@ export default function Demo() {
                   <CardContent className="pt-6">
                     <h3 className="text-lg font-semibold mb-4">YouTube Connection</h3>
                     {isConnected ? (
-                      <div className="flex items-center gap-2 text-green-600">
+                      <div className="flex items-center gap-2 text-green-400">
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                         Connected to YouTube
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                           Connect your YouTube account to upload videos
                         </p>
                         <Button

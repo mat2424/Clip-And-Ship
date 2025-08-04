@@ -60,14 +60,25 @@ export const HeroSection = () => {
           </div>
         </div>
 
-        {/* Single centered button */}
-        <Button 
-          className="bg-cool-turquoise hover:bg-cool-turquoise-hover text-cool-charcoal px-8 py-4 text-lg font-medium rounded-lg transition-colors"
-          onClick={handleGetStarted}
-        >
-          {user ? "Go to Dashboard" : "Start Creating Videos"}
-          <ArrowRight className="w-5 h-5 ml-2" />
-        </Button>
+        {/* Centered buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <Button 
+            className="bg-cool-turquoise hover:bg-cool-turquoise-hover text-cool-charcoal px-8 py-4 text-lg font-medium rounded-lg transition-colors"
+            onClick={handleGetStarted}
+          >
+            {user ? "Go to Dashboard" : "Start Creating Videos"}
+            <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
+          
+          <Button 
+            variant="outline"
+            className="border-cool-turquoise text-cool-turquoise hover:bg-cool-turquoise hover:text-cool-charcoal px-8 py-4 text-lg font-medium rounded-lg transition-colors"
+            onClick={() => navigate('/demo')}
+          >
+            Try Demo
+            <ArrowRight className="w-5 h-5 ml-2" />
+          </Button>
+        </div>
       </div>
     </section>
   );
