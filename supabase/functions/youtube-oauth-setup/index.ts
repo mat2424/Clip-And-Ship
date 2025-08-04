@@ -73,11 +73,9 @@ serve(async (req) => {
     const state = btoa(JSON.stringify(stateData))
     console.log(`🔐 [${requestId}] Generated secure state for user ${user.id}`)
 
-    // Enhanced YouTube OAuth URL with comprehensive scopes
+    // Minimal YouTube OAuth scopes for faster authorization
     const scopes = [
-      'https://www.googleapis.com/auth/youtube.upload',
-      'https://www.googleapis.com/auth/youtube.readonly',
-      'https://www.googleapis.com/auth/youtube.force-ssl'
+      'https://www.googleapis.com/auth/youtube.upload'
     ].join(' ')
 
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')
@@ -87,8 +85,8 @@ serve(async (req) => {
     authUrl.searchParams.set('scope', scopes)
     authUrl.searchParams.set('state', state)
     authUrl.searchParams.set('access_type', 'offline')
-    authUrl.searchParams.set('prompt', 'consent')
-    authUrl.searchParams.set('include_granted_scopes', 'true')
+    authUrl.searchParams.set('prompt', 'select_account')
+    authUrl.searchParams.set('include_granted_scopes', 'false')
 
     console.log(`🔗 [${requestId}] OAuth URL generated: ${authUrl.origin}${authUrl.pathname}`)
     console.log(`📊 [${requestId}] Scopes requested: ${scopes}`)
