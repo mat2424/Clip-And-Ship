@@ -66,65 +66,109 @@ export const useDemoYouTubeAuth = () => {
         throw new Error(error.message);
       }
 
-      if (!data?.auth_url) {
-        console.error('❌ No auth URL received:', data);
-        throw new Error('No auth URL received');
+      if (!data?.auth_url || !data?.session_id) {
+        console.error('❌ No auth URL or session ID received:', data);
+        throw new Error('No auth URL or session ID received');
       }
 
-      console.log('✅ Opening YouTube OAuth popup for demo...');
+      const sessionId = data.session_id;
+      console.log('✅ Opening YouTube OAuth popup for demo with session:', sessionId);
       
-      // Open OAuth in popup for demo
-      const popup = window.open(
-        data.auth_url,
-        'youtube_oauth',
-        'width=500,height=600,scrollbars=yes,resizable=yes'
-      );
-
-      // Listen for popup completion
-      const checkClosed = setInterval(() => {
-        if (popup?.closed) {
-          clearInterval(checkClosed);
-          // Check if connection was successful
-          setTimeout(() => {
-            checkConnection();
-          }, 1000);
+      // Set up communication listeners BEFORE opening popup
+      let resolved = false;
+      
+      // Method 1: BroadcastChannel
+      let channel: BroadcastChannel | null = null;
+      try {
+        channel = new BroadcastChannel(`youtube_auth_${sessionId}`);
+        channel.addEventListener('message', (event) => {
+          if (resolved) return;
+          handleAuthResult(event.data);
+        });
+      } catch (e) {
+        console.log('BroadcastChannel not available');
+      }
+      
+      // Method 2: localStorage polling
+      const pollStorage = () => {
+        try {
+          const result = localStorage.getItem(`youtube_auth_result_${sessionId}`);
+          if (result && !resolved) {
+            const data = JSON.parse(result);
+            localStorage.removeItem(`youtube_auth_result_${sessionId}`);
+            handleAuthResult(data);
+          }
+        } catch (e) {
+          console.log('localStorage polling failed');
         }
-      }, 1000);
-
-      // Listen for messages from popup
+      };
+      
+      const storageInterval = setInterval(pollStorage, 1000);
+      
+      // Method 3: PostMessage (fallback)
       const messageListener = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
+        if (resolved || event.origin !== window.location.origin) return;
         
-        if (event.data.type === 'YOUTUBE_OAUTH_SUCCESS') {
-          popup?.close();
-          clearInterval(checkClosed);
-          
+        if (event.data.type === 'YOUTUBE_OAUTH_SUCCESS' || event.data.type === 'YOUTUBE_AUTH_ERROR') {
+          handleAuthResult(event.data);
+        }
+      };
+      
+      window.addEventListener('message', messageListener);
+      
+      const handleAuthResult = (data: any) => {
+        if (resolved) return;
+        resolved = true;
+        
+        // Cleanup
+        clearInterval(storageInterval);
+        window.removeEventListener('message', messageListener);
+        if (channel) {
+          channel.close();
+        }
+        
+        if (data.type === 'YOUTUBE_OAUTH_SUCCESS') {
           // Store demo connection
           sessionStorage.setItem('demo_youtube_connected', 'true');
-          sessionStorage.setItem('demo_youtube_channel', event.data.channelName || 'Demo Channel');
+          sessionStorage.setItem('demo_youtube_channel', data.channelName || 'Demo Channel');
           
           setIsConnected(true);
-          setChannelName(event.data.channelName || 'Demo Channel');
+          setChannelName(data.channelName || 'Demo Channel');
           
           toast({
             title: "YouTube Connected!",
             description: "You can now upload videos to YouTube.",
           });
-        } else if (event.data.type === 'YOUTUBE_OAUTH_ERROR') {
-          popup?.close();
-          clearInterval(checkClosed);
-          throw new Error(event.data.error || 'OAuth failed');
+        } else if (data.type === 'YOUTUBE_AUTH_ERROR') {
+          throw new Error(data.error || 'OAuth failed');
         }
       };
-
-      window.addEventListener('message', messageListener);
-
+      
+      // Open OAuth in popup
+      const popup = window.open(
+        data.auth_url,
+        'youtube_oauth',
+        'width=500,height=600,scrollbars=yes,resizable=yes'
+      );
+      
       // Cleanup after 5 minutes
       setTimeout(() => {
-        window.removeEventListener('message', messageListener);
-        clearInterval(checkClosed);
-        if (popup && !popup.closed) {
-          popup.close();
+        if (!resolved) {
+          resolved = true;
+          clearInterval(storageInterval);
+          window.removeEventListener('message', messageListener);
+          if (channel) {
+            channel.close();
+          }
+          if (popup && !popup.closed) {
+            popup.close();
+          }
+          
+          toast({
+            title: "Connection Timeout",
+            description: "OAuth process timed out. Please try again.",
+            variant: "destructive",
+          });
         }
       }, 300000);
 

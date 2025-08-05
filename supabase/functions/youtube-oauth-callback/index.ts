@@ -51,7 +51,7 @@ serve(async (req) => {
     const authCode = searchParams.get('code');
     const state = searchParams.get('state');
     const error = searchParams.get('error');
-    const sessionId = searchParams.get('session_id');
+    let sessionId = searchParams.get('session_id');
 
     console.log(`📋 [${requestId}] OAuth callback received`, {
       hasCode: !!authCode,
@@ -73,7 +73,16 @@ serve(async (req) => {
     try {
       const decodedState = atob(state);
       stateData = JSON.parse(decodedState);
-      console.log(`🔍 [${requestId}] Decoded state data:`, { hasUserId: !!stateData.user_id, hasTimestamp: !!stateData.timestamp, hasNonce: !!stateData.nonce });
+      // Extract session_id from state if not in URL params
+      if (!sessionId && stateData.sessionId) {
+        sessionId = stateData.sessionId;
+      }
+      console.log(`🔍 [${requestId}] Decoded state data:`, { 
+        hasUserId: !!stateData.user_id, 
+        hasTimestamp: !!stateData.timestamp, 
+        hasNonce: !!stateData.nonce,
+        sessionId: sessionId
+      });
     } catch (decodeError) {
       console.error(`❌ [${requestId}] Failed to decode state: ${state}`, decodeError);
       throw new Error('Invalid state parameter format');
@@ -250,7 +259,7 @@ function createSuccessPage(channelName: string, sessionId?: string): Response {
           const sessionId = '${sessionId || ''}';
           const channelName = '${channelName}';
           const successData = {
-            type: 'YOUTUBE_AUTH_SUCCESS',
+            type: 'YOUTUBE_OAUTH_SUCCESS',
             channelName: channelName,
             timestamp: Date.now(),
             sessionId: sessionId
@@ -389,7 +398,7 @@ function createErrorPage(title: string, message: string, sessionId?: string): Re
           
           const sessionId = '${sessionId || ''}';
           const errorData = {
-            type: 'YOUTUBE_AUTH_ERROR',
+            type: 'YOUTUBE_OAUTH_ERROR',
             error: '${message}',
             timestamp: Date.now(),
             sessionId: sessionId

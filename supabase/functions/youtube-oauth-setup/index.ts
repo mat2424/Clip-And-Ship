@@ -74,12 +74,16 @@ serve(async (req) => {
       throw new Error('Invalid redirect URI configuration')
     }
 
+    // Generate session ID for communication
+    const sessionId = crypto.randomUUID();
+    
     // Generate cryptographically secure state parameter
     const stateData = {
       user_id: userId,
       timestamp: Date.now(), // Store as milliseconds
       nonce: crypto.randomUUID(),
-      demo_mode: demo_mode || false
+      demo_mode: demo_mode || false,
+      sessionId: sessionId
     }
     
     const state = btoa(JSON.stringify(stateData))
@@ -107,6 +111,7 @@ serve(async (req) => {
       JSON.stringify({ 
         auth_url: authUrl.toString(),
         state: state,
+        session_id: sessionId,
         expires_in: 2700 // 45 minutes
       }),
       { 
