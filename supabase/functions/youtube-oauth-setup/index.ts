@@ -101,7 +101,7 @@ serve(async (req) => {
     authUrl.searchParams.set('scope', scopes)
     authUrl.searchParams.set('state', state)
     authUrl.searchParams.set('access_type', 'offline')
-    authUrl.searchParams.set('prompt', 'select_account')
+    authUrl.searchParams.set('prompt', 'consent')
     authUrl.searchParams.set('include_granted_scopes', 'false')
 
     console.log(`🔗 [${requestId}] OAuth URL generated: ${authUrl.origin}${authUrl.pathname}`)
