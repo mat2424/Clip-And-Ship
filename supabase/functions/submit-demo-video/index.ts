@@ -71,6 +71,7 @@ serve(async (req) => {
       voice_file_url: body.voice_file_url || null,
       is_demo: true,
       demo_mode: true,
+      subscription_tier: "demo", // Add subscription tier for demo requests
       platforms: ['youtube'], // Demo only supports YouTube
       request_id: requestId,
       submitted_at: new Date().toISOString(),
