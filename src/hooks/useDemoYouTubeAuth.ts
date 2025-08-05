@@ -120,6 +120,11 @@ export const useDemoYouTubeAuth = () => {
         if (resolved) return;
         resolved = true;
         
+        // Close popup immediately
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+        
         // Cleanup
         clearInterval(storageInterval);
         window.removeEventListener('message', messageListener);

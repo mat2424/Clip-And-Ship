@@ -57,10 +57,23 @@ export const useDemoSubmission = () => {
 
       console.log('Demo video submitted successfully:', response);
 
-      toast({
-        title: "Success!",
-        description: "Your demo video has been submitted for processing and will be uploaded to YouTube.",
-      });
+      // Check if we got a YouTube URL back
+      if (response?.youtubeUrl) {
+        toast({
+          title: "Upload Successful!",
+          description: `Your video has been uploaded to YouTube. View it at: ${response.youtubeUrl}`,
+        });
+        
+        // Open YouTube video in new tab after a short delay
+        setTimeout(() => {
+          window.open(response.youtubeUrl, '_blank');
+        }, 1000);
+      } else {
+        toast({
+          title: "Success!",
+          description: "Your demo video has been submitted for processing and will be uploaded to YouTube.",
+        });
+      }
 
       return response;
 

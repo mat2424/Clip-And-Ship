@@ -73,16 +73,18 @@ export default function Demo() {
     }
 
     try {
-      await submitVideo({
+      const result = await submitVideo({
         title: selectedVideo.title,
         caption: editedCaption,
         videoUrl: selectedVideo.videoUrl,
       });
 
-      toast({
-        title: "Upload Successful!",
-        description: "Your video has been uploaded to YouTube.",
-      });
+      // Reset selection and go back to video list after successful upload
+      setTimeout(() => {
+        setSelectedVideo(null);
+        setEditedCaption("");
+      }, 3000); // Give user time to read success message
+
     } catch (error) {
       toast({
         title: "Upload Failed",
