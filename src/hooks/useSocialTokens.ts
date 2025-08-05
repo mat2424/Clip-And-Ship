@@ -291,6 +291,63 @@ export const useSocialTokens = () => {
 
   useEffect(() => {
     fetchConnectedAccounts();
+
+    // Set up real-time subscriptions for immediate updates
+    const setupRealtimeSubscriptions = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Subscribe to YouTube tokens changes
+        const youtubeChannel = supabase
+          .channel('youtube-tokens-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'youtube_tokens',
+              filter: `user_id=eq.${user.id}`
+            },
+            (payload) => {
+              console.log('📡 Real-time: YouTube tokens changed:', payload);
+              // Clear cache and refresh
+              cachedAccounts = [];
+              lastFetchTime = 0;
+              fetchConnectedAccounts(true);
+            }
+          )
+          .subscribe();
+
+        // Subscribe to social tokens changes
+        const socialChannel = supabase
+          .channel('social-tokens-changes')
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table: 'social_tokens',
+              filter: `user_id=eq.${user.id}`
+            },
+            (payload) => {
+              console.log('📡 Real-time: Social tokens changed:', payload);
+              // Clear cache and refresh
+              cachedAccounts = [];
+              lastFetchTime = 0;
+              fetchConnectedAccounts(true);
+            }
+          )
+          .subscribe();
+
+        // Cleanup subscriptions on component unmount
+        return () => {
+          supabase.removeChannel(youtubeChannel);
+          supabase.removeChannel(socialChannel);
+        };
+      }
+    };
+
+    setupRealtimeSubscriptions();
   }, []);
 
   return {

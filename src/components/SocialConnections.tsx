@@ -108,15 +108,25 @@ export const SocialConnections = () => {
         description: "Please complete the authorization process in the popup window.",
       });
 
-      // Refresh accounts after a delay to check for new connections
-      setTimeout(() => {
+      // Set up a more aggressive refresh strategy for connections
+      const refreshInterval = setInterval(() => {
         refreshAccounts(true);
+      }, 2000); // Check every 2 seconds
+
+      // Clear interval and remove connecting state after 30 seconds max
+      setTimeout(() => {
+        clearInterval(refreshInterval);
         setConnectingPlatforms(prev => {
           const newSet = new Set(prev);
           newSet.delete(platform);
           return newSet;
         });
-      }, 3000);
+      }, 30000); // 30 seconds timeout
+
+      // Also do an immediate refresh after 1 second
+      setTimeout(() => {
+        refreshAccounts(true);
+      }, 1000);
 
     } catch (error: any) {
       console.error('Error connecting platform:', error);
