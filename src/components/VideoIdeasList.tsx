@@ -2,6 +2,7 @@ import { useState } from "react";
 import { VideoPreviewModal } from "./VideoPreviewModal";
 import { PublishVideoModal } from "./PublishVideoModal";
 import { VideoIdeaItem } from "./VideoIdea/VideoIdeaItem";
+import { VideoGenerationPlaceholder } from "./VideoGenerationPlaceholder";
 import { useVideoIdeas } from "@/hooks/useVideoIdeas";
 import { Button } from "@/components/ui/button";
 import { Plus, ChevronDown, ChevronRight } from "lucide-react";
@@ -36,9 +37,9 @@ export const VideoIdeasList = () => {
   const [selectedVideoForPublish, setSelectedVideoForPublish] = useState<VideoIdea | null>(null);
   const [isEntireSectionCollapsed, setIsEntireSectionCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    'generating': true,
     'ready_for_approval': true,
     'approved': true,
-    'processing': true,
     'completed': true
   });
   const toggleSection = (section: string) => {
@@ -49,18 +50,18 @@ export const VideoIdeasList = () => {
   };
   const categorizeVideos = () => {
     const categories = {
+      'generating': videoIdeas.filter(v => v.status === 'pending' || v.status === 'processing' || v.status === 'generating'),
       'ready_for_approval': videoIdeas.filter(v => v.approval_status === 'ready_for_approval'),
       'approved': videoIdeas.filter(v => v.approval_status === 'approved'),
-      'processing': videoIdeas.filter(v => v.status === 'processing' || v.status === 'generating'),
       'completed': videoIdeas.filter(v => v.approval_status === 'published' || v.youtube_link || v.instagram_link || v.tiktok_link)
     };
     return categories;
   };
   const getSectionTitle = (section: string, count: number) => {
     const titles = {
+      'generating': `Generating Videos (${count})`,
       'ready_for_approval': `Ready for Approval (${count})`,
       'approved': `Approved Videos (${count})`,
-      'processing': `Processing (${count})`,
       'completed': `Published Videos (${count})`
     };
     return titles[section] || section;
@@ -99,7 +100,22 @@ export const VideoIdeasList = () => {
                       </div>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-1">
-                      {videos.map(idea => <VideoIdeaItem key={idea.id} idea={idea} onPreviewClick={setSelectedVideoForPreview} onApprovalChange={refetchVideoIdeas} />)}
+                      {videos.map(idea => (
+                        section === 'generating' ? (
+                          <VideoGenerationPlaceholder 
+                            key={idea.id} 
+                            status={idea.status} 
+                            ideaText={idea.idea_text} 
+                          />
+                        ) : (
+                          <VideoIdeaItem 
+                            key={idea.id} 
+                            idea={idea} 
+                            onPreviewClick={setSelectedVideoForPreview} 
+                            onApprovalChange={refetchVideoIdeas} 
+                          />
+                        )
+                      ))}
                     </CollapsibleContent>
                   </Collapsible>;
           })}

@@ -82,17 +82,29 @@ export const useVideoIdeas = () => {
       if (previousVideoIdeas.length > 0) {
         filteredVideoIdeas.forEach(newVideo => {
           const oldVideo = previousVideoIdeas.find(v => v.id === newVideo.id);
-          if (oldVideo && 
-              oldVideo.status !== 'completed' && 
-              newVideo.status === 'completed' && 
-              newVideo.video_url) {
-            // Import toast dynamically to avoid circular dependency
-            import("@/hooks/use-toast").then(({ toast }) => {
-              toast({
-                title: "🎉 Video Ready!",
-                description: `Your video "${newVideo.idea_text.substring(0, 50)}..." has been generated successfully!`,
+          if (oldVideo) {
+            // Video completed notification
+            if (oldVideo.status !== 'completed' && 
+                newVideo.status === 'completed' && 
+                newVideo.video_url) {
+              import("@/hooks/use-toast").then(({ toast }) => {
+                toast({
+                  title: "🎉 Video Ready!",
+                  description: `Your video "${newVideo.idea_text.substring(0, 50)}..." has been generated successfully!`,
+                });
               });
-            });
+            }
+            
+            // Video ready for approval notification
+            if (oldVideo.approval_status !== 'ready_for_approval' && 
+                newVideo.approval_status === 'ready_for_approval') {
+              import("@/hooks/use-toast").then(({ toast }) => {
+                toast({
+                  title: "🎬 Video Complete!",
+                  description: `Your video "${newVideo.idea_text.substring(0, 50)}..." is ready for review!`,
+                });
+              });
+            }
           }
         });
       }

@@ -30,6 +30,21 @@ export const VideoIdeaForm = () => {
     setIdeaText(value);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Submit on Enter (without Shift)
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (canSubmit && !loading) {
+        handleSecureSubmit(e as any);
+      }
+    }
+    
+    // Allow spacebar to work normally in the textarea
+    if (e.key === ' ') {
+      e.stopPropagation();
+    }
+  };
+
   const handleSecureSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -58,15 +73,10 @@ export const VideoIdeaForm = () => {
         <Label htmlFor="idea_text">Your Video Idea (10 characters minimum)</Label>
         <Textarea
           id="idea_text"
-          placeholder="Describe your video idea in detail..."
+          placeholder="Describe your video idea in detail... (Press Enter to generate)"
           value={ideaText}
           onChange={(e) => handleInputChange(e.target.value)}
-          onKeyDown={(e) => {
-            // Allow spacebar to work normally in the textarea
-            if (e.key === ' ') {
-              e.stopPropagation();
-            }
-          }}
+          onKeyDown={handleKeyDown}
           className="min-h-[100px] resize-none"
           required
         />
