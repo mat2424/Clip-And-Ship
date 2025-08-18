@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -131,6 +131,10 @@ export type Database = {
           full_name: string | null
           google_id: string | null
           id: string
+          referral_code: string | null
+          referral_count: number
+          referral_progress: number
+          referred_by: string | null
           subscription_tier: string
           terms_accepted_at: string | null
           updated_at: string
@@ -144,6 +148,10 @@ export type Database = {
           full_name?: string | null
           google_id?: string | null
           id: string
+          referral_code?: string | null
+          referral_count?: number
+          referral_progress?: number
+          referred_by?: string | null
           subscription_tier?: string
           terms_accepted_at?: string | null
           updated_at?: string
@@ -157,12 +165,75 @@ export type Database = {
           full_name?: string | null
           google_id?: string | null
           id?: string
+          referral_code?: string | null
+          referral_count?: number
+          referral_progress?: number
+          referred_by?: string | null
           subscription_tier?: string
           terms_accepted_at?: string | null
           updated_at?: string
           welcome_credits_given?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          credits_awarded: number | null
+          id: string
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          credits_awarded?: number | null
+          id?: string
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          credits_awarded?: number | null
+          id?: string
+          referral_code?: string
+          referred_id?: string
+          referrer_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_tokens: {
         Row: {
@@ -424,9 +495,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_referral_credits: {
+        Args: {
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+        }
+        Returns: boolean
+      }
       delete_rejected_video_ideas: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      generate_referral_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
     }
     Enums: {

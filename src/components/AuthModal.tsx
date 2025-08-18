@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useReferralTracking } from "@/hooks/useReferralTracking";
 import { Link } from "react-router-dom";
 import ReCAPTCHA from "react-google-recaptcha";
 import {
@@ -29,6 +30,7 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [recaptchaValue, setRecaptchaValue] = useState<string | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
   const { toast } = useToast();
+  const { getReferralCode, clearReferralCode } = useReferralTracking();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,14 +48,28 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const referralCode = getReferralCode();
+        const signUpOptions: any = {
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/oauth-callback`
           }
-        });
+        };
+
+        // Add referral code to user metadata if available
+        if (referralCode) {
+          signUpOptions.options.data = {
+            referral_code: referralCode
+          };
+        }
+
+        const { error } = await supabase.auth.signUp(signUpOptions);
         if (error) throw error;
+
+        // Clear referral code after successful signup
+        clearReferralCode();
+
         toast({
           title: "Success!",
           description: "Check your email to confirm your account.",
@@ -85,14 +101,27 @@ export const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
 
   const handleGoogleSignIn = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const referralCode = getReferralCode();
+      const oauthOptions: any = {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/oauth-callback`,
           scopes: 'email profile',
         }
-      });
+      };
+
+      // Add referral code to OAuth data if available
+      if (referralCode) {
+        oauthOptions.options.data = {
+          referral_code: referralCode
+        };
+      }
+
+      const { error } = await supabase.auth.signInWithOAuth(oauthOptions);
       if (error) throw error;
+
+      // Clear referral code after successful OAuth initiation
+      clearReferralCode();
     } catch (error: any) {
       toast({
         title: "Error",

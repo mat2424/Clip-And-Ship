@@ -7,6 +7,7 @@ import { VideoIdeasList } from "@/components/VideoIdeasList";
 import { CreditBalance } from "@/components/CreditBalance";
 import { PricingSection } from "@/components/PricingSection";
 import { SocialConnections } from "@/components/SocialConnections";
+import { ReferralPanel } from "@/components/ReferralPanel";
 
 import { Button } from "@/components/ui/button";
 import { User, LogOut, Settings } from "lucide-react";
@@ -14,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { MobileDropdown } from "@/components/MobileDropdown";
 import { AuthModal } from "@/components/AuthModal";
+import { useReferralTracking } from "@/hooks/useReferralTracking";
 
 const Index = () => {
   const [user, setUser] = useState<any>(null);
@@ -21,6 +23,9 @@ const Index = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Initialize referral tracking
+  useReferralTracking();
 
   useEffect(() => {
     // Get initial session
@@ -129,9 +134,10 @@ const Index = () => {
             <VideoIdeasList />
           </div>
 
-          {/* Right Column - Pricing and Social Connections */}
+          {/* Right Column - Pricing, Referrals and Social Connections */}
           <div className="lg:col-span-1 space-y-8">
             <PricingSection />
+            {user && <ReferralPanel />}
             {user && <SocialConnections />}
           </div>
         </div>
